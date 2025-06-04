@@ -6,9 +6,9 @@
 
 The Bayesian KMO index is a novel re-conceptualization of the Kaiser-Meyer-Olkin (KMO) index that enables researchers to incorporate prior information and make coherent probabilistic statements about the sampling adequacy of a data matrix.
 
-The Bayesian KMO (BKMO) index is introduced in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index* (newest version published June 4th, 2025). This paper subscribes to the open science standard and is made freely available.
+The Bayesian KMO (BKMO) index is introduced in the research paper [*Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index*](https://emeyer-hansen.github.io/bayesian-kmo/) (newest version published June 4th, 2025). This paper subscribes to the open science standard and is made freely available.
 
-Materials are also made available on its [*Open Science Framework* (OSF) project page] (https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
+Materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
 
 **Keywords**: *Kaiser-Meyer-Olkin index, KMO, Bayesian Kaiser-Meyer-Olkin index, BKMO, Measure of Sampling Adequacy, MSA, Bayesian Measure of Sampling Adequacy, BMSA, Robust KMO index, Bootstrap KMO index, Bayesian inference, Likelihood-based inference, Frequentist inference*
 
