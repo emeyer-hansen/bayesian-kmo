@@ -4,7 +4,7 @@
 
 05/06/2025
 
-The Bayesian KMO (BKMO) index is introduced in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index*. This paper subscribes to the open science standard and is made freely available, in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
+The Bayesian KMO (BKMO) index is introduced in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index*. This paper subscribes to the [*open science standard*](https://www.cos.io/open-science) and is made freely available, in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
 
 ## Abstract
 
@@ -14,7 +14,7 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
 
 ## FAQ
 - The newest iteration of the research paper (in PDF-format) is made available in the 'Newest'-folder.
-- An archive of different iterations of the research paper, data, and materials are made available under the 'Archive'-folder.
+- An archive of different iterations of the research paper and materials, including source data and data, are made freely available in the 'Archive'-folder.
 - A version of the newest iteration of the research paper is also made available in HTML-format at the URL: (https://emeyer-hansen.github.io/bayesian-kmo/)
 - Materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
 
