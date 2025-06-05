@@ -4,7 +4,7 @@
 
 04/06/2025
 
-The Bayesian KMO (BKMO) index is introduced in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index* (newest version published June 4th, 2025). This paper subscribes to the open science standard and is made freely available, in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
+The Bayesian KMO (BKMO) index is introduced in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index*. This paper subscribes to the open science standard and is made freely available, in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
 
 ## Abstract
 
@@ -20,7 +20,7 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
 
 ## Changelog
 
-- **2025-06-04 15:53 CEST**
+- **2025-06-05 07:28 CEST**
   - [Version 2025-06-03-09-14-HTML] - Working Paper (HTML Version).
 - **2025-06-03 09:14 CEST**
   - [Version 2025-06-03-09-14] - Working Paper (Minor Corrections).
@@ -37,7 +37,7 @@ Building on previous conceptualizations, the *Bayesian Keiser-Meyer-Olkin* (BKMO
 
 Please, if you use, refer to, modify, and/or continue the development of the Bayesian KMO index, provide proper reference and citation to its founding author. An example of proper citation is provided below:
 ```
-Meyer-Hansen, E. N. (2025): *Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index*. Working Paper (v2025-06-03-09-14)`, on Open Science Framework. DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
+Meyer-Hansen, E. N. (2025): *Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index*. Working Paper (v2025-06-03-09-14), on the Open Science Framework. DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
 ```
 
 For LaTeX users, a BibTeX entry is provided below:
@@ -48,6 +48,6 @@ For LaTeX users, a BibTeX entry is provided below:
   publisher = {Open Science Framework},
   year = {2025},
   doi = {10.17605/OSF.IO/T3UPD},
-  pubstate = {Working Paper}
+  pubstate = {Working Paper (v2025-06-03-09-14)}
 }
 ```
