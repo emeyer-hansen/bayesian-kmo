@@ -1,0 +1,100 @@
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{titlesec}
+\usepackage{changepage}
+\usepackage{setspace}
+\usepackage{etoolbox}
+
+\setlength{\headheight}{14pt}
+\addtolength{\topmargin}{-1.6pt}
+% Reduce vertical spacing after section headings
+\titlespacing*{\section}
+  {0pt}{2.5ex plus 1ex minus .2ex}{0.5ex plus .1ex} % Adjusted the space after section heading
+\titlespacing*{\subsection}
+  {0pt}{2ex plus 0.8ex minus .2ex}{0.5ex plus .1ex} % Adjusted the space after subsection heading
+\titlespacing*{\subsubsection}
+  {0pt}{1.5ex plus 0.5ex minus .2ex}{0.3ex plus .1ex} % Adjusted the space after subsubsection heading
+
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[LO]{\small \doiref}
+\fancyfoot[LE]{\small \dynamicversion}
+\fancyfoot[R]{\small Page \thepage\ out of \pageref{LastPage}}
+
+% Force fancy style even on first page by overriding plain page style
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[LO]{\small \doiref}
+  \fancyfoot[LE]{\small  \dynamicversion}
+  \fancyfoot[R]{\small Page \thepage\ out of \pageref{LastPage}}
+}
+
+\fancyhead[L]{\small \authorref}
+\fancyhead[C]{\small \dynamicdate}
+\fancyhead[RE]{\small \titleref}
+\fancyhead[RO]{\small \subtitleref}
+
+\makeatletter
+% Remove vertical skip after section heading
+\patchcmd{\@startsection}
+  {\@afterindenttrue}
+  {\@afterindentfalse}
+  {}{}
+\makeatother
+
+\renewcommand{\baselinestretch}{1.5}
+
+\newenvironment{notetext}{\begin{quote}\small}{\end{quote}}
+
+\newenvironment{abstractparagraph}{%
+  \vspace{0em}
+  \begin{adjustwidth}{2em}{2em}
+  \fontsize{10pt}{10pt}\selectfont
+  \noindent
+}{%
+  \end{adjustwidth}
+  \vspace{0em}
+}
+
+\newenvironment{firstparagraph}{%
+  \vspace{0em}
+  \begin{adjustwidth}{0em}{0em}
+  \fontsize{10pt}{10pt}\selectfont
+  \noindent
+}{%
+  \end{adjustwidth}
+  \vspace{0em}
+}
+
+\newenvironment{midparagraph}{%
+  \vspace{0em}
+  \begin{adjustwidth}{0em}{0em}
+  \fontsize{10pt}{10pt}\selectfont
+  \noindent
+  \hangindent=2em
+  \hangafter=1
+}{%
+  \end{adjustwidth}
+  \vspace{0em}
+}
+
+\newenvironment{lastparagraph}{%
+  \vspace{0em}
+  \begin{adjustwidth}{0em}{0em}
+  \fontsize{10pt}{10pt}\selectfont
+  \noindent
+}{%
+  \end{adjustwidth}
+  \vspace{0em}
+}
+
+\newenvironment{note}{%
+  \vspace{0em}
+  \begin{adjustwidth}{0em}{0em}
+  \fontsize{8pt}{8pt}\selectfont
+  \noindent
+}{%
+  \end{adjustwidth}
+  \vspace{0em}
+}

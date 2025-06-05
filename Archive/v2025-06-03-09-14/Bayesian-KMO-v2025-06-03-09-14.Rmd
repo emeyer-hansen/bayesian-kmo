@@ -1,0 +1,2014 @@
+---
+title: "Revisiting 'Little Jiffy, Mark IV'^[**Version**: `r format(Sys.time(), '%Y-%m-%d-%H-%M')`. For changelog, see Section 7.1 in the Appendix.]"
+subtitle: "Towards a Bayesian KMO index"
+author: "Emil Niclas Meyer-Hansen^[**Author**: Independent Researcher. Holds a Master of Science and Bachelor of Science in Political Science from [Aarhus University, Denmark](https://international.au.dk/) (email: emil098meyerhansen@gmail.com).]"
+date: "`r paste0(as.integer(format(Sys.Date(), '%d')), ' ', format(Sys.Date(), '%B %Y'))`"
+output:
+  bookdown::pdf_document2:
+    booktabs: true
+    toc: false
+    toc_depth: 1
+    number_sections: true
+    highlight: NULL
+    fig_width: 11
+    fig_height: 14
+    fig_caption: true
+    keep_tex: true
+    latex_engine: xelatex  # or pdflatex/lualatex
+    includes:
+      in_header: Bayesian-KMO-header-v2025-06-03-09-14.tex
+    extra_dependencies:
+      caption: ["labelfont={bf}"]
+      hyperref: ["unicode=true", "breaklinks=true"]
+      lmodern: null
+      float: null
+      amsmath: null
+header-includes:
+  - \usepackage{etoolbox}
+  - \usepackage{abstract}
+  - \renewcommand{\abstractname}{}    % remove the word "Abstract" if desired
+  - \renewenvironment{abstract}
+      {\begin{center}\normalfont\large\bfseries Abstract\end{center}\vspace{-1em}\begin{quotation}\large}
+      {\end{quotation}}
+  - \setlength{\parskip}{0em}
+  - \usepackage{floatrow}
+  - \floatsetup[figure]{capposition=top}
+  - \floatsetup[table]{capposition=top}
+  - \usepackage{fvextra}
+  - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+bibliography: Bayesian-KMO-literature-v2025-06-03-09-14.bib
+link-citations: true
+fontsize: 10pt
+papersize: a4
+abstract: "The *Kaiser-Meyer-Olkin* (KMO) index is a measure of sampling adequacy used by researchers to assess whether a data matrix is factorable prior to a factor analysis. Since its conception, the KMO index has remained a Frequentist statistic, leaving researchers unable to employ the advantages of Bayesian inference when assessing sampling adequacy. Building on the increasing relevance of the Bayesian statistical approach, as well as advancements in Markov-Chain Monte Carlo methods, the author proposes a re-conceptualization of the KMO index within the Bayesian framework that enables researchers to incorporate prior information and make coherent probabilistic statements about the sampling adequacy of a data matrix.©^[**License**: Except where otherwise indicated, all contents of this document and associated files are licensed under the *Creative Commons Attribution 4.0 International License* ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)). All software, source code, executable code, code snippets, code chunks, algorithms, and/or scripts within this document and associated files are expressly excluded from the foregoing license, and unless otherwise indicated, are instead licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)). By engaging with this document and/or any associated files, which include, but are *not* necessarily limited to, downloading, using, and/or distributing any of them, in parts of whole, you agree to comply with the applicable license terms for the respective content types. For information on citation, see Section 7.7 in the Appendix.]"
+keywords: "Kaiser-Meyer-Olkin index, KMO, Bayesian Kaiser-Meyer-Olkin index, BKMO, Measure of Sampling Adequacy, MSA, Bayesian Measure of Sampling Adequacy, BMSA, Robust KMO index, Bootstrap KMO index, Bayesian inference, Likelihood-based inference, Frequentist inference,"
+linestretch: 1.5
+geometry: margin=1in
+documentclass: article
+mainfont: "Times New Roman"
+csl: journal-of-the-american-statistical-association.csl
+classoption: twoside
+---
+```{=latex}
+\newcommand{\dynamicdate}{`r format(Sys.Date(), "%d/%m/%Y")`}
+\newcommand{\dynamicversion}{`r paste0('v', format(Sys.time(), '%Y-%m-%d-%H-%M'))`}
+\newcommand{\doiref}{`r paste0('DOI: 10.17605/OSF.IO/T3UPD')`}
+\newcommand{\authorref}{`r paste0('Emil Niclas Meyer-Hansen')`}
+\newcommand{\titleref}{`r paste0("Revisiting 'Little Jiffy, Mark IV'")`}
+\newcommand{\subtitleref}{`r paste0('Towards a Bayesian KMO index')`}
+```
+<style>
+body { text-align: justify }
+</style>
+```{r prespecifications, include=FALSE}
+
+# NOTE: Before this document can be knitted, users must download the 'journal-of-the-american-statistical-association.csl' file from the Zetero Style Repository (https://www.zotero.org/styles), and all code chunks will have to be run at least once to generate the needed files.
+
+# Set Working directory
+setwd("")
+
+# Load R packages
+library(pacman)
+pacman::p_load(
+  tidyverse,
+  knitr,
+  rmarkdown,
+  psych,
+  rQCC,
+  brms,
+  kableExtra,
+  bookdown,
+  rstudioapi,
+  parallel,
+  doParallel,
+  foreach,
+  random,
+  bayestestR,
+  performance,
+  effectsize,
+  datawizard,
+  scrutiny,
+  weights,
+  bayesplot,
+  tidybayes,
+  latex2exp,
+  trialr,
+  Polychrome,
+  rstan,
+  pwr
+)
+
+# Document Options
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "")
+digits <- list(
+  text = 3,
+  figure = 3,
+  table = 3
+)
+options(digits = digits$figure)
+big_mark <- ","
+
+# Specify MCMC/Bootstrap
+posterior_samples <- 40000
+chains <- cores <- parallel::detectCores()-1
+warmup <- 2000
+iter <- ceiling((posterior_samples / chains) + warmup)
+posterior_samples <- (iter - warmup)*chains
+doParallel::registerDoParallel(cores)
+
+# Specify NHST
+alpha <- .05
+beta <- .2
+
+# Specify RNG 
+SEED <- 89881187 # random::randomNumbers(1, min = 1, max = 1000000000, col = 1) %>% as.vector() # Commented-out function used to generate the specified seed
+set.seed(SEED)
+
+# Define QoL Rounding functions
+round_up <- function(x = NULL, digits = 3, add = FALSE){
+  stopifnot(is.numeric(x))
+  stopifnot(is.numeric(digits))
+  digits <- round(digits)
+  stopifnot(is.logical(add))
+  require(scrutiny)
+  require(weights)
+  return(weights::rd(scrutiny::round_up(x, digits = digits), digits = digits, add = add))
+}
+round_down <- function(x = NULL, digits = 3, add = FALSE){
+  stopifnot(is.numeric(x))
+  stopifnot(is.numeric(digits))
+  digits <- round(digits)
+  stopifnot(is.logical(add))
+  require(scrutiny)
+  require(weights)
+  return(weights::rd(scrutiny::round_down(x, digits = digits), digits = digits, add = add))
+}
+
+# Define QoL Formatting function
+qformat <- function(x = NULL, scientific = FALSE, trim = TRUE, big.mark = ","){
+  stopifnot(is.numeric(x))
+  stopifnot(is.logical(scientific))
+  stopifnot(is.logical(trim))
+  stopifnot(is.character(big.mark))
+  return(format(x, scientific = scientific, trim = trim, big.mark = big_mark))
+}
+
+# Define Maximum-likelihood functions
+var2 <- function(x = NULL, x_mean = NULL, na.rm = FALSE){
+  stopifnot(is.numeric(x))
+  stopifnot(is.logical(na.rm))
+  if(!is.null(x_mean)){
+    stopifnot(is.numeric(x_mean))
+  }else{
+    x_mean <- mean(x, na.rm = na.rm)
+  }
+  x_var <- mean((x - x_mean)^2, na.rm = na.rm)
+  return(x_var)
+}
+sd2 <- function(x = NULL, x_mean = NULL, na.rm = FALSE){
+  stopifnot(is.numeric(x))
+  stopifnot(is.logical(na.rm))
+  if(!is.null(x_mean)){
+    stopifnot(is.numeric(x_mean))
+  }else{
+    x_mean <- mean(x, na.rm = na.rm)
+  }
+  x_sd <- sqrt(var2(x = x, x_mean = x_mean, na.rm = FALSE))
+  return(x_sd)
+}
+standardize2 <- function(x = NULL, x_mean = NULL, x_sd = NULL, na.rm = FALSE){
+  stopifnot(is.numeric(x))
+  stopifnot(is.logical(na.rm))
+  if(!is.null(x_mean)){
+    stopifnot(is.numeric(x_mean))
+  }else{
+    x_mean <- mean(x, na.rm = na.rm)
+  }
+  if(!is.null(x_sd)){
+    stopifnot(is.numeric(x_sd))
+    stopifnot(x_sd > 0)
+  }else{
+    x_sd <- sd2(x = x, x_mean = x_mean, na.rm = na.rm)
+  }
+  x_standardized <- (x - x_mean) / x_sd
+  return(x_standardized)
+}
+
+# Define Monte-Carlo Standard Error function
+mcse <- function(x = NULL){
+  stopifnot(is.numeric(x))
+  require(rstan)
+  x_sd <- sd2(x)
+  x_ess_bulk <- rstan::ess_bulk(x)
+  return(x_sd / sqrt(x_ess_bulk))
+}
+
+# Define Anti-image Correlation Matrix function
+cor_anti_image <- function(R = NULL){
+  inv_R <- solve(R)
+  P <- -inv_R / sqrt(outer(diag(inv_R), diag(inv_R)))
+  return(P)
+}
+
+# Define Bayesian KMO index function
+BKMO <- function(r = NULL){
+  if(!is.matrix(r)) r <- as.matrix(r)
+  
+  # Compute p (i.e., number of theorized manifestations)
+  disc <- sqrt(1 + 8 * ncol(r))
+  p <- (1 + disc) / 2
+  
+  # Define utility function for vectorization
+  utility_KMO <- function(r = r, p = p){
+    # Construct correlation matrix 
+    R <- diag(1, p)
+    R[upper.tri(R)] <- r
+    R[lower.tri(R)] <- t(R)[lower.tri(R)]
+    row.names(R) <- paste0('m', 1:p)
+    colnames(R) <- paste0('m', 1:p)
+    
+    # Compute inverse R
+    R_inv <- solve(R)
+    
+    # Compute anti-image R
+    R_q <- -R_inv / sqrt(outer(diag(R_inv), diag(R_inv)))
+    
+    # Compute KMO
+    diag(R_q) <- 0
+    r2 <- R^2
+    q2 <- R_q^2
+    diag(r2) <- 0
+    diag(q2) <- 0
+    kmo <- c(rowSums(r2) / (rowSums(r2) + rowSums(q2)), overall = sum(r2) / (sum(r2) + sum(q2)))
+    return(kmo)
+  }
+  
+  # Compute KMO for each posterior draw using vectorization
+  bkmo <- do.call(rbind, lapply(1:nrow(r), function(i) utility_KMO(r = r[i, , drop = FALSE], p = p)))
+  return(as.data.frame(bkmo))
+}
+
+# Specifications for simulating data
+sample_size <- 1000
+sesoi <- .3
+sesed <- pwr::pwr.r.test(sample_size, sig.level = alpha, power = 1-beta, alternative = "two.sided")$r
+sesed <- sesed %>% round_down(digits = digits$text)
+power_sesoi <- pwr::pwr.r.test(sample_size, r= .3, sig.level = alpha, alternative = "two.sided")$power
+power_sesoi <- ifelse(power_sesoi > .999, .999, power_sesoi)
+power_sesoi <- paste0((power_sesoi*100) %>% round_down(digits = 1), "%")
+n_manifestations <- 10
+```
+
+```{r simulating_data, include = FALSE, eval = FALSE}
+# Simulate data
+loadings <- runif(n_manifestations, sesoi, .7)
+df <- data.frame(
+  latent = rnorm(sample_size)
+)
+for(i in 1:n_manifestations){
+  df[,paste0("m", i)] <- loadings[i]*df$latent + rnorm(sample_size)
+}
+df <- df %>% select(-latent)
+
+# Save data
+write.csv(df, "Data/simulated_data.csv", row.names = FALSE)
+```
+
+```{r load_simulated_data, include = FALSE}
+
+# Load and standardize simulated data
+df <- read.csv("Data/simulated_data.csv")
+df <- apply(df, 2, datawizard::standardize) %>% as.data.frame()
+
+# Compute VIF
+vifs <- performance::check_collinearity(lm(m1 ~ ., df))$VIF
+vifs_interpretation <- vifs %>% effectsize::interpret_vif()
+lowest_vif <- paste0("$\\forall \\theta_m(VIF \\leq ", min(vifs) %>% round_up(digits = digits$text), ")$")
+
+# Compute correlation matrix
+R <- cor(df)
+R_inv <- solve(R)
+
+# Compute unique correlation matrix
+P <- -R_inv
+diag(P) <- diag(R_inv)
+P <- P / sqrt(outer(diag(P), diag(P)))
+
+# Compute KMO
+kmo_indices <- psych::KMO(df)
+
+# Construct matrix with results
+cor_parcor <- R %>% as.matrix()
+cor_parcor[upper.tri(cor_parcor)] <- P[upper.tri(P)]
+diag(cor_parcor) <- kmo_indices$MSAi %>% as.vector()
+colnames(cor_parcor) <- paste0("$\\theta_{", 1:n_manifestations, "}$")
+row.names(cor_parcor) <- paste0("$\\theta_{", 1:n_manifestations, "}$")
+```
+
+```{r robust_kmo, include = FALSE}
+
+# Rank-standardize data
+df_ranked <- apply(df, 2, rank) %>% as.data.frame()
+df_ranked <- apply(df_ranked, 2, datawizard::standardize) %>% as.data.frame()
+
+# Compute KMO index
+kmo_indices_ranked <- psych::KMO(df_ranked)
+```
+
+```{r bootstrapping_data, include = FALSE, eval = FALSE}
+# Compute bootstrap of KMO index
+bootstrapped_kmo <- foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  df_i <- df[sample(1:nrow(df), nrow(df), replace = TRUE),]
+  row.names(df_i) <- NULL
+  df_i <- apply(df_i, 2, datawizard::standardize) |> as.data.frame()
+  kmo_i <- psych::KMO(df_i)
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output_i <- data.frame(kmo_overall = kmo_i$MSA)
+  output_i <- cbind(output_i, kmos_i)
+  return(output_i)
+}
+
+# Save results
+write.csv(bootstrapped_kmo, "Data/bootstrapped_kmo.csv", row.names = FALSE)
+```
+
+```{r load_bootstrapped_data, include = FALSE}
+
+# Load bootstrapped KMO index
+bootstrapped_kmo <- readr::read_csv("Data/bootstrapped_kmo.csv") %>% as.data.frame()
+
+# Format bootstrapped KMO results
+bootstrapped_kmo_overall <- paste0(
+  bootstrapped_kmo$kmo_overall %>% mean() %>% round_down(digits = digits$text),
+  " (SE = ", bootstrapped_kmo$kmo_overall %>% sd() %>% {./rQCC::c4.factor(nrow(bootstrapped_kmo), "sd")} %>% round_up(digits = digits$text),
+  "; 95% BCa[", (bootstrapped_kmo$kmo_overall %>% bayestestR::bcai())$CI_low %>% round_down(digits = digits$text),
+  "; ", (bootstrapped_kmo$kmo_overall %>% bayestestR::bcai())$CI_high %>% round_down(digits = digits$text),
+  "])"
+)
+```
+
+```{r R_bglm_fit, include = FALSE, eval = FALSE}
+# Standardize data matrix
+df <- apply(df, 2, standardize2) %>% as.data.frame()
+
+# Specify Gaussian multivariate model
+R_bglm_model <- brms::bf(
+  mvbind(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10) ~ 0,
+  sigma ~ 0,
+  family = gaussian(
+    link = "identity"
+  )
+) + set_rescor(TRUE)
+
+# Specify model priors
+R_bglm_priors <- brms::get_prior(R_bglm_model, data = df)
+R_bglm_priors[1,] <- brms::set_prior(
+  "lkj(2)",
+  class = "rescor"
+)
+
+# Sample model priors
+R_bglm_priors_fit <- brms::brm(
+  formula = R_bglm_model,
+  family = gaussian(
+    link = "identity"
+  ),
+  prior = R_bglm_priors,
+  sample_prior = "only",
+  data = df, 
+  chains = chains,
+  cores = cores,
+  iter = iter,
+  warmup = warmup,
+  seed = SEED,
+  save_pars = save_pars(all = TRUE),
+  file = "Data/R_bglm_priors_fit",
+  file_refit = "on_change",
+  control = list(adapt_delta = .99)
+)
+summary(R_bglm_priors_fit)
+
+# Sample posterior
+R_bglm_fit <- brms::brm(
+  formula = R_bglm_model,
+  family = gaussian(
+    link = "identity"
+  ),
+  prior = R_bglm_priors,
+  data = df, 
+  chains = chains,
+  cores = cores,
+  iter = iter,
+  warmup = warmup,
+  seed = SEED,
+  save_pars = save_pars(all = TRUE),
+  file = "Data/R_bglm_fit",
+  file_refit = "on_change",
+  control = list(adapt_delta = .99)
+)
+summary(R_bglm_fit)
+
+# Change to 'non-informative' (i.e., uniform) priors
+R_bglm_priors[1,] <- brms::set_prior(
+  "lkj(1)",
+  class = "rescor"
+)
+
+# Sample likelihood
+R_bglm_likelihood_fit <- brms::brm(
+  formula = R_bglm_model,
+  family = gaussian(
+    link = "identity"
+  ),
+  prior = R_bglm_priors,
+  data = df, 
+  chains = chains,
+  cores = cores,
+  iter = iter,
+  warmup = warmup,
+  seed = SEED,
+  save_pars = save_pars(all = TRUE),
+  file = "Data/R_bglm_likelihood_fit",
+  file_refit = "on_change",
+  control = list(adapt_delta = .99)
+)
+summary(R_bglm_likelihood_fit)
+```
+
+```{r load_R_bglm_fit, include = FALSE}
+# Load Model with sampled priors
+R_bglm_priors_fit <- readRDS("Data/R_bglm_priors_fit.rds")
+R_bglm_priors_samples <- brms::as_draws_df(R_bglm_priors_fit)
+R_bglm_priors_correlations <- R_bglm_priors_samples[,str_detect(colnames(R_bglm_priors_samples), "rescor__")]
+
+# Load Model with sampled posteriors
+R_bglm_fit <- readRDS("Data/R_bglm_fit.rds")
+R_bglm_samples <- brms::as_draws_df(R_bglm_fit)
+R_bglm_correlations <- R_bglm_samples[,str_detect(colnames(R_bglm_samples), "rescor__")]
+
+# Load Model with likelihood posterior
+R_bglm_likelihood_fit <- readRDS("Data/R_bglm_likelihood_fit.rds")
+R_bglm_likelihood_samples <- brms::as_draws_df(R_bglm_likelihood_fit)
+R_bglm_likelihood_correlations <- R_bglm_samples[,str_detect(colnames(R_bglm_likelihood_samples), "rescor__")]
+```
+
+```{r traceplots, eval = FALSE}
+# Specify colors
+traceplot_color_chart <- Polychrome::palette36.colors(15) %>% as.vector()
+
+# Assess sampled priors: Rhat, ESS, MCSE, and Traceplots
+R_bglm_priors_rhat <- brms::rhat(R_bglm_priors_fit)
+all(R_bglm_priors_rhat[stringr::str_detect(names(R_bglm_priors_rhat), "^rescor__")] < 1.01) # TRUE: All Rhat less than 1.01
+R_bglm_priors_samples_array <- brms::as_draws_array(R_bglm_priors_fit)
+R_bglm_priors_ess_bulk <- apply(R_bglm_priors_samples_array, 3, rstan::ess_bulk)
+all(R_bglm_priors_ess_bulk[stringr::str_detect(names(R_bglm_priors_ess_bulk), "^rescor__")] >= 10000) # TRUE: All bulk ESS greater than or equal to 1000
+R_bglm_priors_mcse <- apply(R_bglm_priors_samples_array, 3, mcse)
+all(R_bglm_priors_mcse[stringr::str_detect(names(R_bglm_priors_mcse), "^rescor__")] < .002) # TRUE: All MCSE less than .002
+R_bglm_priors_fit %>%
+bayesplot::mcmc_trace(regex_pars = c("rescor__"), n_warmup = warmup, np = nuts_params(R_bglm_priors_fit)) +
+  theme_classic() +
+  scale_color_manual(values = traceplot_color_chart) +
+  scale_fill_manual(values = traceplot_color_chart) +
+  labs(
+    color = "Chain"
+  )
+
+# Assess sampled posteriors: Rhat, ESS, MCSE, and Traceplots
+R_bglm_rhat <- brms::rhat(R_bglm_fit)
+all(R_bglm_rhat[stringr::str_detect(names(R_bglm_rhat), "^rescor__")] < 1.01) # TRUE: All Rhat less than 1.01
+R_bglm_samples_array <- brms::as_draws_array(R_bglm_fit)
+R_bglm_ess_bulk <- apply(R_bglm_samples_array, 3, rstan::ess_bulk)
+all(R_bglm_ess_bulk[stringr::str_detect(names(R_bglm_ess_bulk), "^rescor__")] >= 10000) # TRUE: All bulk ESS greater than or equal to 1000
+R_bglm_mcse <- apply(R_bglm_samples_array, 3, mcse)
+all(R_bglm_mcse[stringr::str_detect(names(R_bglm_mcse), "^rescor__")] < .001) # TRUE: All MCSE less than .001
+R_bglm_fit %>%
+bayesplot::mcmc_trace(regex_pars = c("rescor__"), n_warmup = warmup, np = nuts_params(R_bglm_priors_fit)) +
+  theme_classic() +
+  scale_color_manual(values = traceplot_color_chart) +
+  scale_fill_manual(values = traceplot_color_chart) +
+  labs(
+    color = "Chain"
+  )
+
+# Assess sampled likelihood: Rhat, ESS, MCSE, and Traceplots
+R_bglm_likelihood_rhat <- brms::rhat(R_bglm_likelihood_fit)
+all(R_bglm_likelihood_rhat[stringr::str_detect(names(R_bglm_likelihood_rhat), "^rescor__")] < 1.01) # TRUE: All Rhat less than 1.01
+R_bglm_likelihood_samples_array <- brms::as_draws_array(R_bglm_likelihood_fit)
+R_bglm_likelihood_ess_bulk <- apply(R_bglm_likelihood_samples_array, 3, rstan::ess_bulk)
+all(R_bglm_likelihood_ess_bulk[stringr::str_detect(names(R_bglm_likelihood_ess_bulk), "^rescor__")] >= 10000) # TRUE: All bulk ESS greater than or equal to 1000
+R_bglm_likelihood_mcse <- apply(R_bglm_likelihood_samples_array, 3, mcse)
+all(R_bglm_likelihood_mcse[stringr::str_detect(names(R_bglm_likelihood_mcse), "^rescor__")] < .001) # TRUE: All MCSE less than .001
+R_bglm_likelihood_fit %>%
+bayesplot::mcmc_trace(regex_pars = c("rescor__"), n_warmup = warmup, np = nuts_params(R_bglm_priors_fit)) +
+  theme_classic() +
+  scale_color_manual(values = traceplot_color_chart) +
+  scale_fill_manual(values = traceplot_color_chart) +
+  labs(
+    color = "Chain"
+  )
+```
+
+```{r bayesian_kmo, include = FALSE, eval = FALSE}
+# Compute and save BKMO for sampled priors
+bayesian_kmo_priors <- BKMO(R_bglm_priors_correlations)
+write.csv(bayesian_kmo_priors, "Data/bayesian_kmo_priors.csv", row.names = FALSE)
+
+# Compute and save BKMO for sampled posteriors
+bayesian_kmo <- BKMO(R_bglm_correlations)
+write.csv(bayesian_kmo, "Data/bayesian_kmo.csv", row.names = FALSE)
+
+# Compute and save BKMO for sampled likelihood
+bayesian_kmo_likelihood <- BKMO(R_bglm_likelihood_correlations)
+write.csv(bayesian_kmo_likelihood, "Data/bayesian_kmo_likelihood.csv", row.names = FALSE)
+```
+
+```{r load_bayesian_kmo, include = FALSE}
+
+# Load and format BKMO for sampled priors
+bayesian_kmo_priors <- readr::read_csv("Data/bayesian_kmo_priors.csv")
+bayesian_kmo_overall_prior <- paste0(
+  bayesian_kmo_priors$overall %>% mean() %>% round_down(digits = digits$text),
+  " (SD = ", bayesian_kmo_priors$overall %>% sd2() %>% round_up(digits = digits$text),
+  "; 95% HDI[", (bayesian_kmo_priors$overall %>% bayestestR::hdi())$CI_low %>% round_down(digits = digits$text),
+  "; ", (bayesian_kmo_priors$overall %>% bayestestR::hdi())$CI_high %>% round_down(digits = digits$text),
+  "])"
+)
+
+# Load and format BKMO for sampled posteriors
+bayesian_kmo <- readr::read_csv("Data/bayesian_kmo.csv")
+bayesian_kmo_overall <- paste0(
+  bayesian_kmo$overall %>% mean() %>% round_down(digits = digits$text),
+  " (SD = ", bayesian_kmo$overall %>% sd2() %>% round_up(digits = digits$text),
+  "; 95% HDI[", (bayesian_kmo$overall %>% bayestestR::hdi())$CI_low %>% round_down(digits = digits$text),
+  "; ", (bayesian_kmo$overall %>% bayestestR::hdi())$CI_high %>% round_down(digits = digits$text),
+  "])"
+)
+
+# Load and format BKMO for sampled likelihood
+bayesian_kmo_likelihood <- readr::read_csv("Data/bayesian_kmo_likelihood.csv")
+bayesian_kmo_overall_likelihood <- paste0(
+  bayesian_kmo_likelihood$overall %>% mean() %>% round_down(digits = digits$text),
+  " (SD = ", bayesian_kmo_likelihood$overall %>% sd2() %>% round_up(digits = digits$text),
+  "; 95% HDI[", (bayesian_kmo_likelihood$overall %>% bayestestR::hdi())$CI_low %>% round_down(digits = digits$text),
+  "; ", (bayesian_kmo_likelihood$overall %>% bayestestR::hdi())$CI_high %>% round_down(digits = digits$text),
+  "])"
+)
+```
+
+```{r bkmo_overall_plot, eval = FALSE}
+# Construct df to compare BKMO for sampled prior and posterior
+kmo_overall_prior_posterior_df <- data.frame(
+  Distribution = factor(
+    c(
+      rep("Prior", nrow(bayesian_kmo_priors)),
+      rep("Posterior", nrow(bayesian_kmo))
+    ),
+    levels = c("Prior", "Posterior")
+  ),
+  Estimate = c(
+    bayesian_kmo_priors$overall,
+    bayesian_kmo$overall
+  )
+)
+
+# Construct and save plot with BKMO prior and posterior
+kmo_overall_prior_posterior_plot <- kmo_overall_prior_posterior_df %>% ggplot(aes(x = Estimate, group = Distribution, fill = Distribution, color = Distribution)) +
+  stat_slab(aes(y = 0), alpha = .60, color = "black") +
+  stat_pointinterval(
+    aes(y = -0.1),
+    point_interval = "mode_hdci",
+    .width = .95,
+    outline_bars = FALSE,
+    color = "black",
+    fill = "black",
+    alpha = .70,
+    interval_size_range = c(.5, 2),
+    interval_size_domain = c(.1, 3.5)
+  ) +
+  stat_pointinterval(
+    aes(y = -0.1),
+    point_interval = "mode_hdci",
+    .width = .95,
+    outline_bars = FALSE,
+    alpha = .70,
+    interval_size_range = c(.5, 2)
+  ) +
+  labs(
+    x = latex2exp::TeX("$\\hat{\\alpha}$", italic = TRUE),
+    y = "Density"
+  ) +
+  scale_x_continuous(breaks = seq(0, 1, .05)) +
+  scale_y_continuous(breaks = seq(0, 1, .1), limits = c(-.15, 1)) +
+  coord_cartesian(xlim = c(0, 1)) +
+  theme(
+    axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+    axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+  ) +
+  scale_color_manual(values = c("#d62728", "#1f77b4")) +
+  scale_fill_manual(values = c("#d62728", "#1f77b4")) + 
+  theme_classic()
+save(kmo_overall_prior_posterior_plot, file = "Plots/kmo_overall_prior_posterior_plot.rda", version = 2)
+
+# Construct df to compare BKMO for sampled likelihood, bootstrap, and posterior
+kmo_overall_df <- data.frame(
+  Distribution = factor(
+    c(
+      rep("Likelihood", nrow(bayesian_kmo_likelihood)),
+      rep("Bootstrap", nrow(bootstrapped_kmo)),
+      rep("Posterior", nrow(bayesian_kmo))
+    ),
+    levels = c("Likelihood", "Posterior", "Bootstrap")
+  ),
+  Estimate = c(
+    bayesian_kmo_likelihood$overall,
+    bootstrapped_kmo$kmo_overall,
+    bayesian_kmo$overall
+  )
+)
+
+# Construct and save plot with BKMO likelihood, bootstrap, and posterior
+bkmo_overall_comparison_plot <- kmo_overall_df %>% ggplot(aes(x = Estimate, group = Distribution, fill = Distribution, color = Distribution)) +
+  stat_slab(aes(y = 0), alpha = .40, color = "black") +
+  stat_pointinterval(
+    aes(y = -0.1),
+    point_interval = "mode_hdci",
+    .width = .95,
+    outline_bars = FALSE,
+    color = "black",
+    fill = "black",
+    alpha = .40,
+    interval_size_range = c(.5, 2),
+    interval_size_domain = c(.1, 3.5)
+  ) +
+  stat_pointinterval(
+    aes(y = -0.1),
+    point_interval = "mode_hdci",
+    .width = .95,
+    outline_bars = FALSE,
+    alpha = .40,
+    interval_size_range = c(.5, 2)
+  ) +
+  labs(
+    x = latex2exp::TeX("$\\hat{\\alpha}$", italic = TRUE),
+    y = "Density"
+  ) +
+  scale_x_continuous(breaks = seq(0, 1, .01)) +
+  scale_y_continuous(breaks = seq(0, 1, .1), limit = c(-.15, 1)) +
+  coord_cartesian(xlim = range(kmo_overall_df$Estimate)) +
+  theme(
+    axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+    axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+  ) +
+  scale_color_manual(values = c("#1f77b4", "#d62728", "orange")) +
+  scale_fill_manual(values = c("#1f77b4", "#d62728", "orange")) +
+  theme_classic()
+save(bkmo_overall_comparison_plot, file = "Plots/bkmo_overall_comparison_plot.rda", version = 2)
+```
+
+\vspace{5em}
+
+**Keywords**: *Kaiser-Meyer-Olkin index, KMO, Bayesian Kaiser-Meyer-Olkin index, BKMO, Measure of Sampling Adequacy, MSA, Bayesian Measure of Sampling Adequacy, BMSA, Robust KMO index, Bootstrap KMO index, Bayesian inference, Likelihood-based inference, Frequentist inference*
+
+\newpage
+
+
+# Introduction {#sec:sec_introduction}
+
+The *Kaiser-Meyer-Olkin* (KMO) index, formally referred to as a *Measure of Sampling Adequacy* [MSA, @Kaiser1970; @KaiserAndRice1974; @Kaiser1981], is a statistic useful for determining whether a data matrix can be considered 'appropriate' for factor analysis [@DziubanAndShirkey1974; @Field2018: 798; @Revelle2025]. Named in honor of Henry F. Kaiser^[Former Professor of the [University of California, Berkeley](https://www.berkeley.edu/).], Edward P. Meyer^[Former professor of [Loyola University, Chicago](https://www.luc.edu/). It should be noted that there is some uncertainty about Edward P. Meyer being the 'Meyer' of 'Kaiser-Meyer-Olkin', because Kaiser never mentions this 'Meyer' by first name, but only makes vague mentions of contributions from a 'Professor Meyer of Loyola, Chicago' [@Kaiser1970: 405]. At the same time, it appears that Kaiser did *not* himself coin the term 'Kaiser-Meyer-Olkin' as a name for the MSA, which instead appears to be an invention of @DziubanAndShirkey1974, but these authors also makes no explicit mention of a 'Professor Meyer'. However, based on personal communication with staff of Loyola University, Chicago, this 'Professor Meyer of Loyola, Chicago' would appear to be Edward Paul Meyer, who was a Professor of Psychology at Loyola during the period (1969 - 1972) when the KMO index was invented.], and Ingram Olkin^[Former Professor of [Stanford University](https://www.stanford.edu/).] [cf. @DziubanAndShirkey1974; @Kaiser1970: 405; @KaiserAndRice1974: 112; @Kaiser1981: 380], it is often used to assess whether a data matrix is *factorable* [cf. @Revelle2025; e.g., @Field2018: 797-799], which is a desired property to ascertain prior to an *exploratory factor analysis* [EFA, cf. @Field2018: 778-833]. While originally introduced as 'a second generation Little Jiffy'^[The term 'Little Jiffy' was coined by former Professor Chester W. Harris of the [University of Wisconsin–Madison](https://www.wisc.edu/) and was used by Henry F. Kaiser to denote the analytic procedure of 'principal components with associated eigenvalues greater than one followed by normal varimax rotation' [@Kaiser1970: 402]. Note that this 'Little Jiffy, Mark I' is *not* directly related to later versions of 'Little Jiffy' [e.g., @Kaiser1970].] by @Kaiser1970, the currently most used iteration of the KMO index is the result of two subsequent revisions^[The first revision of the KMO index, 'Little Jiffy, Mark III', went unpublished though its changes were incorporated into 'Mark IV' [@KaiserAndRice1974: 112]], including a collaboration between Kaiser and John Rice^[Emeritus Professor of the [University of California, Berkeley](https://www.berkeley.edu/). Former Professor of the [University of California, San Diego](https://ucsd.edu/).], titled 'Little Jiffy, Mark IV' [@KaiserAndRice1974].^[A final revision of the KMO index was made by @Kaiser1981, which is simply the square-root of the original KMO index by @Kaiser1970, but this revised version appears mostly ignored across statistical software packages and applied research. Accordingly, this paper focuses on 'Little Jiffy, Mark IV' [@KaiserAndRice1974].] Though it historically may have seen most use within psychology [e.g., @DziubanAndShirkey1974; @Zabihietal2014; @Ghadirietal2015], often being used in conjunction with Maurice S. Bartlett's [-@Bartlett1950] *test of sphericity* [e.g., @DziubanAndShirkey1974; @Field2018], to this day, it remains a standard measure in statistical software [e.g., @IBM2025; @Revelle2025] that helps researchers across disciplines gauge whether their data can be meaningfully explored using factor analysis [e.g., @Ahmadetal2024; @Almeidaetal2022; @Sarfarazetal2024; @Sadowskaetal2021; @Danaeietal2024].
+
+\parindent=2em Conceived within the *classical statistical framework* [for introductory texts, see, e.g., @Field2018; @StockAndWatson2019; @Wooldridge2019], the KMO index can be shown to be conceptually 'Frequentist' [cf. @Kaiser1970; @KaiserAndRice1974; @Kaiser1981], and a counterpart suitable for the *Bayesian statistical framework* [for introductory texts, see, e.g., @Gelmanetal2014; @Gelmanetal2021; @Kruschke2014; @LevyAndMislevy2020; @McElreath2019] is currently missing. This is a relevant shortcoming, since recent advances in Bayesian inference [for a review, see, e.g., @Gelman2022] has made this framework more viable for applied research [e.g., @Gelmanetal1996; @Gelmanetal2019; @HoffmanAndGelman2014; @Vehtarietal2021], and considering the numerous criticisms of Frequentism [e.g., @Clayton2021; @Cohen1994; @Gelman2023; @GelmanAndStern2006; @Gigerenzer2004; @Gigerenzer2018], transitioning to the Bayesian approach may be the best option [cf. @Kruschke2014; @McElreath2019; @Wagenmakersetal2010]. Accordingly, a multitude of Frequentist statistics have already been converted into Bayesian counterparts [e.g., @Benshacharetal2020; @Gelmanetal2019; @Makowskietal2019a], and researchers acquainted with the KMO index may take issue with the lack of a Bayesian version that can properly exploit the numerous advantages of Bayesian inference, such as the ability to incorporate prior information into the analysis and make coherent probabilistic statements from a posterior distribution [cf. @Clayton2021; @Gelmanetal2014; @Kruschke2014; @McElreath2019].
+
+This paper solves the issue of a missing Bayesian KMO index by re-conceptualizing it within the Bayesian framework and demonstrating its implementation using standard statistical software. To build towards a Bayesian concept, this is achieved by revisiting the current KMO index (Section \ref{sec:sec_kmo}), discussing it mathematical and conceptual properties within the Frequentist, Likelihood-based, and Bayesian frameworks, as well as re-examining its robustness and viability for inference. The resulting *Bayesian Kaiser-Meyer-Olkin* (BKMO) index is introduced (Section \ref{sec:sec_bkmo}), which can be considered a *Bayesian Measure of Sampling Adequacy* (BMSA) that can incorporate prior information and express uncertainty about the sampling adequacy with posterior distributions. With weakly informative priors and small samples, the BKMO index is effectively estimated using regularization, and with 'non-informative' priors, the BKMO index approximates results derived from its Frequentist and Likelihood-based counterparts. The BKMO is discussed (Section \ref{sec:sec_discussion}), where, analogous to its classical counterpart, the BKMO can be made robust using rank-normalization, and similar to a bootstrapped version, the Bayesian version enables inferential statements to be made regarding the sampling adequacy of the data matrix.
+
+
+# The Kaiser-Meyer-Olkin index {#sec:sec_kmo}
+
+To build towards a Bayesian conceptualization, it is necessary to first understand the classical and most widely used version of the KMO index, that is, 'Little Jiffy, Mark IV' [@KaiserAndRice1974], including the mathematical formula involved in its calculation. Readers should note that this paper uses the terms 'KMO index' and 'Measure of Sampling adequacy' interchangeably, since the KMO index *is* a measure of the 'sampling adequacy' of a data matrix [@Kaiser1970; @KaiserAndRice1974; @Kaiser1981]. This helps emphasize that the viability of the KMO index in applied research is highly dependent on the characteristics of this data matrix from which it is calculated. While explicitly specifying this data matrix is often neglected [e.g., @Kaiser1970; @KaiserAndRice1974; @Kaiser1981], this will be done here (Section \ref{sec:sec_kmo_data}) to reveal the assumptions of the KMO index and help make sense its formula (Section \ref{sec:sec_kmo_formula}) and interpretation (Section \ref{sec:sec_kmo_interpretation}). After demonstrating its application (Section \ref{sec:sec_kmo_example}), these assumptions are discussed in relation to its robustness (Section \ref{sec:sec_kmo_robustness}) and viability for inference (Section \ref{sec:sec_kmo_inference}).
+
+
+## Data Matrix {#sec:sec_kmo_data}
+
+Specifying the data matrix can be done using *set theory* [@Burgess2022; @Cantor1874] and standard notation [e.g., @McElreath2019; @Wooldridge2019] that, following @Kruschke2014, is made more mnemonic for the purposes of this paper. Suppose the existence of an $n \cdot k$ data matrix (i.e., $\mathcal{D}$). Let $n$ be the positive and finite total number of independent unit observations (i.e., $n \in \mathbb{N}$), randomly sampled to an adequate extent (i.e., $n \gg 1$) from a possibly larger population (i.e., $N$, with $N \geq n$), which (in principle) could be infinitely large ($N \in \mathbb{C}$), with $u$ indexing an arbitrary individual $u$nit observation. Similarly, let $k$ be the positive and finite total number of independently measured phenomena (i.e., $k \in \mathbb{N}$), theorized to be manifestations (i.e., $\theta$) of some *latent phenomenon* (i.e., $\phi$), with an arbitrary $m$anifestation indexed by $m$, randomly sampled to an adequate extent (i.e., $k \gg 1$) from a possibly larger number (i.e., $K$, with $K \geq k$) of manifestations (i.e., $\Theta$, with $\theta \subseteq \Theta$), which (in principle) could be infinitely large (i.e., $K \in \mathbb{C}$). This data matrix ($\mathcal{D}$), with $\theta_{1,1}, \dots, \theta_{n,k}$, is illustrated in equation 2.1.1.
+
+Assume then that both the latent phenomenon ($\phi$) and all of its manifestations ($\theta$) can be meaningfully expressed as real-valued vectors ($\{\phi, \theta\} \subset \mathbb{R}$), and that the latent phenomenon is *independent and identically distributed* [*iid*, cf. @McElreath2019: 81; @StockAndWatson2019: 81-82] as a conditionally *Normal* distribution [$\mathcal{N}$, i.e., *Gaussian*, @Gauss2012; cf. @Wooldridge2019: 704-705] so that: $\phi_u | \nu_u, \sigma^2 \overset{iid}{\sim} \mathcal{N}(\nu_u, \sigma^2)$, for $u$ in $1$, $\dots$, $n$ [cf. @Gelmanetal2014; see also @LevyAndMislevy2020: 88; @Kruschke2014; @McElreath2019].
+$$
+\mathcal{D} =
+\begin{bmatrix}
+\theta_{1,1} & \cdots & \theta_{1,k} \\
+\vdots & \ddots & \vdots \\ 
+\theta_{n,1} & \cdots & \theta_{n,k}
+\end{bmatrix}
+\tag{2.1.1}
+$$
+Further, assume that the latent phenomenon is physically distinct from, and temporally precedes in origin, all of its manifestations (i.e., $\forall \theta_m \, (\phi \neq \theta_m \land \phi \prec \theta_m)$), with every manifestation also being physically distinct from, and temporally simultaneous in origin with, every other manifestation (i.e., $\forall \theta_m (\theta_m \neq \theta_{m'} \land \theta_m \not \prec \theta_{m'} \land \theta_m \not \succ \theta_{m'}$), with $m'$ denoting an arbitrary manifestation that it *not* $m$. Lastly, assume that for all other *causes* of the manifestations (i.e. $\zeta$) that the latent phenomenon is *exogenous* of all of these (i.e., $\forall \zeta \, (\phi \perp \zeta)$). In line with its standard conceptualization in factor analysis [@Field2018: 781-785; see also @LevyAndMislevy2020: 187-190], suppose also that the manifestations are *endogenous* and *iid* as a function of the latent phenomenon, with the following conditionally linear functional form: $\theta_{u,m} | \tau_m, \lambda_m, \varsigma_m^2 \overset{iid}{\sim} \mathcal{N}(\tau_m + \lambda_m \cdot \phi_u, \varsigma_m^2)$, for $u$ in $1$, $\dots$, $n$, and $m$ in $1$, $\dots$, $k$, where $\tau_m$ is the intercept, $\lambda_m$ is the factor loading (i.e., coefficient), and $\varsigma_m$ is the dispersion of manifestation $m$. These assumptions are discussed in section \ref{sec:sec_kmo_inference}.
+
+## Formula {#sec:sec_kmo_formula}
+
+With this general data matrix ($\mathcal{D}$) just outlined in section \ref{sec:sec_kmo_data} in mind, the steps typically used to calculate the KMO index can be shown [cf. @Kaiser1981: 380; @KaiserAndRice1974; consistent with @DziubanAndShirkey1974: 359; @IBM2025; @Revelle2025]. Conceptual considerations from the Frequentist, Likelihood-based, and Bayesian frameworks will be discussed throughout to build towards a Bayesian conceptualization.
+
+First, let $\text{Mean}(\theta_m)$ denote a *piecewise defined function* [cf. @Stewart2010: 16-17] for calculating the mean of manifestation $m$ [cf. @Field2018: 26-27; @Gelmanetal2021: 41-42; @StockAndWatson2019: 82-83; @Wooldridge2019: 666-668]:
+$$
+\text{Mean}(\theta_m) =
+\left\{
+\begin{array}{lll}
+  \hat{\mu}_m = \frac{1}{n} \sum_{u=1}^{n} \theta_{u,m} & \text{if Freq.} \land\ n < N & \text{(2.2.1.1)} \\
+  \mu_m = \frac{1}{n} \sum_{u=1}^{n} \theta_{u,m} & \text{if Freq.} \land\ n = N & \text{(2.2.1.2)} \\
+  \bar{\theta}_m = \frac{1}{n} \sum_{u=1}^{n} \theta_{u,m} & \text{if MLE-Bayes.} & \text{(2.2.1.3)}
+\end{array}
+\right.
+\tag{2.2.1}
+$$
+where $\Sigma$ denotes the *summation operation* [@Euler1755; @Cajori2007], and the aforementioned $u$ indexes the rows of $\mathcal{D}$ (i.e., $u$nit observations), with $n$ rows in total, while $m$ indexes columns of $\mathcal{D}$ (i.e, $m$anifestations). Here, the simplicity of function 2.2.1 helps express some of the conceptual differences between the Frequentist, Likelihood-based, and Bayesian frameworks, since the formula used in each are mathematically equivalent. While all frameworks employ formula that equivalently calculates the equally-weighted arithmetic mean of manifestation $m$, the calculated mean can be conceptualized in at least three different ways. For example, a Frequentist researcher is conceptually interested in estimating the *mean of the population* ($\mu_m$). To achieve this, they conceptualize the formula used to arrive at $\mu_m$ as an *estimator* [cf. @StockAndWatson2019: 105]. The particular estimator of the population mean employed by formula 2.2.1.1 in function 2.2.1 can be denoted $\hat{\mu}_{OLS}$ to reflect its association with the estimation method of *ordinary least squares* [OLS, @Legendre1805; @Wooldridge2019: 70-73]. Accordingly, it is chosen *not* necessarily because it calculates the *mean of the sample* (i.e., $\bar{\theta}_m$), but because of its desirable properties across an (in principle) infinitely large number of samples, where it can be considered an *unbiased estimator* of the population mean when relying on OLS, because it is equivalent to the expected sampling mean [i.e., $\mathbb{E}(\hat{\mu}_{OLS[m]}) = \mu_m$, @StockAndWatson2019: 106-108]. Accordingly, formula 2.2.1.1 calculates the *estimated mean of the population* ($\hat{\mu}_m$). For frequentist researchers in possession of data on the entire population (i.e., $n = N$), the calculated mean is *conceptually* different from $\hat{\mu}_m$, since the sample mean here *is* the *population mean* (i.e., $\mu_m$), enabling the use of formula 2.2.1.2. However, both of these conceptualizations are different from the Likelihood-based and Bayesian approaches.
+
+By comparison, formula 2.2.1.3 in function 2.2.1 can be considered *conceptually* Bayesian, because it calculates the *mean of the sample* (i.e., $\bar{\theta}_m$). This is because in the event of *no prior information*, formula 2.2.1.3 provides the best possible estimate of the mean of manifestation $m$ given the data. Here, the Bayesian framework is *not* inherently built around estimating population characteristics through some concept of drawing infinite samples from that population [cf. @Clayton2021; @McElreath2019], and accordingly, there is no need for varying formula to distinguish between data from a sample or population. While 2.2.1.3 is here referred to as 'Bayesian', readers should note that this formula is only a *point estimator* [cf. @CasellaAndBerger2002: 311] of the sample mean and fails to incorporate prior information. This leaves the calculated mean of formula 2.2.1.3 conceptually equivalent to the *mode of the likelihood-distribution*, which is conceptually of interest to the *Likelihood-based approach* [cf. @King1998]. In this framework, the conceptual output of formula 2.2.1.3 is also preferred for function 2.2.1, since in a manner similar to the Frequentist approach, it can be considered a *maximum-likelihood estimator* ($\hat{\mu}_{MLE}$), which is unbiased for the likelihood-based estimation method. This means that the conceptual output of formula 2.2.1.3 could alternatively be denoted the *maximum-likelihood estimate* [@Wooldridge2019: 725-726]. As such, formula 2.2.1.3 is only conceptually Bayesian in context of no prior information, and it is otherwise mostly of interest to researchers subscribing to the likelihood-based framework.
+
+It should be noted that while the likelihood and Bayesian approaches are conceptually distinct, for simplicity, when in the context of point estimators and no prior information, this paper makes no distinction between them and jointly refers to them as 'MLE-Bayesians'. For 'proper' Bayesian inference, which is concerned with the incorporation of prior information and the estimation of the entire posterior distribution, more complex calculations are required, which typically involve *Markov-Chain Monte Carlo* methods [MCMC, see @Brooksetal2011]. This will be expanded upon when re-conceptualizing the KMO index within the Bayesian framework (see Section \ref{sec:sec_bkmo_conceptualization}). Given the Frequentist formula otherwise generally employed when calculating the KMO index (more on that in this section), the conceptual mean involved in the calculation of the classical KMO index [@KaiserAndRice1974] is taken to be the *estimated mean of the population* ($\hat{\mu}_m$), with formula 2.2.1.1 thus used for function 2.2.1.
+
+Second, let $\text{Var}(\theta_m)$ denote the function for calculating the *variance* of manifestation $m$ [cf. @Field2018: 28-31; @Gelmanetal2021: 41-42; @StockAndWatson2019: 83-84; @Wooldridge2019: 695-696]. Here, not just the conceptual differences between the Frequentist and Bayesian approaches but also their mathematical differences become apparent, since the three different conceptualizations of variance involve at least two mathematically distinct formula, as shown in piecewise function 2.2.2. Here, the three formula are similar because they all involve the calculation of the *sum of squares* [*SS*, cf. @Field2018: 29, 56-57] of manifestation $m$, which can be conceptualized irrespective of statistical framework as: $\sum_{u=1}^{n} (\theta_{u,m} - \text{Mean}(\theta_m))^2$. What makes the function 'Frequentist', 'Likelihoodist', or 'Bayesian' is the conceptualization of the formula employed by $\text{Mean}(\theta_m)$ and the choice of how to weigh the contributions of the observations. For example, formula 2.2.2.1 and 2.2.2.2 are Frequentist, while 2.2.2.3 can be considered MLE-Bayesian.
+$$
+\text{Var}(\theta_m) =
+\left\{
+\begin{array}{lll}
+  \hat{\sigma}^2_m = \frac{1}{n - 1} \sum_{u=1}^{n} (\theta_{u,m} - \hat{\mu}_m)^2 & \text{if Freq.} \land\ n < N & \text{(2.2.2.1)} \\
+  \sigma^2_m = \frac{1}{n} \sum_{u=1}^{n} (\theta_{u,m} - \mu_m)^2 & \text{if Freq.} \land\ n = N & \text{(2.2.2.2)} \\
+  s^2_m = \frac{1}{n} \sum_{u=1}^{n} (\theta_{u,m} - \bar{\theta}_m)^2 & \text{if MLE-Bayes.} & \text{(2.2.2.3)}
+\end{array}
+\right.
+\tag{2.2.2}
+$$
+Formula 2.2.2.1 is again a Frequentist estimator (denoted $\hat{\sigma}^2_{OLS}$) that calculates the variance by dividing the *SS* with $n - 1$, also known as *Bessel's correction* [cf. @Field2018: 29-30; @StockAndWatson2019: 112]. This is a Frequentist adjustment based on the *degrees of freedom* (*df*) that makes the estimator unbiased for OLS [i.e., $\mathbb{E}(\hat{\sigma}^2_{OLS[m]}) = \sigma^2_m$, cf. @Field2018: 58-59; @StockAndWatson2019: 112]. This correction, however, is only applied when working with samples (i.e., $n < N$), and Frequentist researchers with data on the entire population (i.e., $n = N$) need not apply Bessel's correction but can instead rely on formula 2.2.2.2, since the population mean ($\mu_m$) is known for such data [cf. @StockAndWatson2019: 112].
+
+For conceptual clarity, it should be noted that frequentist researchers may sometimes refer to $\hat{\sigma}^2_m$ as the 'sample variance' [denoting it $s^2_m$, e.g., @Field2018: 30; @Gelmanetal2021: 168; @StockAndWatson2019: 112], but this is *inappropriate* [cf. @McElreath2019: 197], since $\hat{\sigma}^2_m$ is *not* the sample variance (i.e., $s^2_m$) but instead an *estimate of the population variance* (i.e., $\hat{\sigma}^2_m$), and for any finite sample, $s^2_m$ does *not* necessarily equal $\hat{\sigma}^2_m$. Instead, the 'sample variance', that is, the *variance in the sample* ($s^2_m$), is calculated by formula 2.2.2.3, which despite being mathematically equivalent to formula 2.2.2.2 is conceptually different for the aforementioned reasons and thus preferred by Bayesian researchers [cf. @McElreath2019: 197].
+
+Frequentists and likelihoodists denote the formula involved in both formula 2.2.2.2 and 2.2.2.3 as the *maximum-likelihood estimator* [$\hat{\sigma}^2_{MLE}$, cf. @CasellaAndBerger2002: 313], in contrast to the *unbiased estimator* for OLS [$\sigma^2_{OLS}$, cf. @Field2018: 29-30; @StockAndWatson2019: 112] used in formula 2.2.2.1. While formula 2.2.2.3 is generally preferred by MLE-Bayesians [cf. @McElreath2019: 197], a 'proper' Bayesian estimate of the variance will again typically involve MCMC methods to incorporate prior information and estimate the entire posterior distribution. Consistent with existing implementations [@DziubanAndShirkey1974; @IBM2025; @Revelle2025], the formula generally used by the current KMO index [@KaiserAndRice1974] for function 2.2.2 is based on formula 2.2.2.2, which outputs the *estimated population variance* ($\hat{\sigma}^2_m$). As such, the current KMO index [cf. @KaiserAndRice1974] can be considered to be conceptually Frequentist, and the lack of a Bayesian or Likelihood-based conceptualization of the KMO index is a detriment to researchers working within this framework who seek to utilize the KMO index to assess 'sampling adequacy' prior to a factor analysis. The fact that the classical KMO index is conceptually frequentist is further corroborated in the following.
+
+Let $\text{SD}(\theta_m)$ then denote the piecewise function for calculating the *standard deviation* of manifestation $m$ [cf. @Field2018: 28-31; @Gelmanetal2021: 41-42; @StockAndWatson2019: 84; @Wooldridge2019: 696]. Illustrated in function 2.2.3, where the *radical* (i.e., $\sqrt{}$) denotes the *square-root operation* [@Rudolff1525; @Descartes1637]. Similar to the variance, the Frequentist and Bayesian approach differ with respect to $\text{SD}(\theta_m)$ as shown by conceptual disagreement about the output of function 2.2.3. Formula 2.2.3.1 and 2.2.3.2 are again Frequentist, with 2.2.3.1 being the result of relying on formula 2.2.2.1 for calculating the variance (function 2.2.2), while 2.2.3.2 relies on formula 2.2.2.2. Formula 2.2.3.1 is again an estimator (i.e., $\hat{\sigma}_{OLS}$) and thus calculates the *estimated standard deviation in the population* (i.e., $\hat{\sigma}_m$), while 2.2.3.2 calculates the *population standard deviation* (i.e., $\sigma_m$), with the former being used when in possession of the sample, while the latter is reserved for population data, where the population mean ($\mu_m$) is known.
+$$
+\text{SD}(\theta_m) =
+\left\{
+\begin{array}{lll}
+  \hat{\sigma}_m = \sqrt{\hat{\sigma}^2_m} & \text{if Freq.} \land n < N & \text{(2.2.3.1)} \\
+  \sigma_m = \sqrt{\sigma^2_m} & \text{if Freq.} \land n = N & \text{(2.2.3.2)} \\
+  s_m = \sqrt{s^2_m} & \text{if MLE-Bayes.} & \text{(2.2.3.3)}
+\end{array}
+\right.
+\tag{2.2.3}
+$$
+Similar to the conceptualization of variance, Frequentists often denote the conceptual output of formula 2.2.3.1 the 'sample standard deviation' [i.e., $s_m$, @Field2018: 30], but this is again *inappropriate* [cf. @McElreath2019: 197], since it is an *estimate of the population standard deviation* (i.e., $\hat{\sigma}_m$). Frequentist researchers should also note that while formula 2.2.3.1 is a less biased estimator than 2.2.3.2 when estimating the population standard deviation with OLS (due to 2.2.2.1 applying Bessel's correction), it is *not* unbiased due to *Jensen's* [-@Jensen1906] *inequality* [i.e., $\mathbb{E}(\hat{\sigma}_{OLS[m]}) \neq \sigma_m$, cf. @Bolch1968]. Instead, to reduce the biasedness of this estimator, one will have to apply a further correction that depends on the assumed distribution and sample size [cf. @Parketal2022; @ParkAndWang2020; @ParkAndWang2022]. This, however, is typically *not* applied when calculating the Frequentist KMO index [cf. @IBM2025; @Revelle2025], meaning a biased estimator of standard deviation is used, and given that the present aim is the development of a *Bayesian* KMO index, this Frequentist correction will *not* be covered here.
+
+The last formula, 2.2.3.3, can be considered MLE-Bayesian in the same manner as formula 2.2.2.3 in function 2.2.2, with equation 2.2.3.3 calculating the *sample standard deviation* (i.e., $s_m$, alternatively denoted $\hat{\sigma}_{MLE}$). MCMC is again the preferred method to estimate the entire posterior distribution and incorporate prior information rather than merely relying the point estimator of formula 2.2.3.3. In line with the above choice of formula 2.2.2.1 for this section, and consistent with common implementations [@IBM2025; @Revelle2025], the classical KMO index is calculated using 2.2.3.1 in function 2.2.3, meaning it uses a biased estimate of the population standard deviation, further corroborating the claim that it is conceptually Frequentist and in need of a Bayesian re-conceptualization.
+
+Third, let $\text{Cov}(\theta_m, \theta_{m'})$ denote the piecewise function for calculating the *covariance* between manifestation $m$ and $m'$ [@Field2018: 336-338; @Wooldridge2019: 697-698]:
+$$
+\text{Cov}(\theta_m, \theta_{m'}) =
+\left\{
+\begin{array}{lll}
+  \hat{\sigma}_{\theta_m, \theta_{m'}} = \frac{1}{n - 1} \sum_{u=1}^{n} (\theta_{u,m} - \hat{\mu}_m)(\theta_{u,m'} - \hat{\mu}_{m'}) & \text{if Freq.} \land n < N & \text{(2.2.4.1)} \\
+  \sigma_{\theta_m, \theta_{m'}} = \frac{1}{n} \sum_{u=1}^{n} (\theta_{u,m} - \mu_m)(\theta_{u,m'} - \mu_{m'}) & \text{if Freq.} \land n = N & \text{(2.2.4.2)} \\
+  s_{\theta_m, \theta_{m'}} = \frac{1}{n} \sum_{u=1}^{n} (\theta_{u,m} - \bar{\theta}_m)(\theta_{u,m'} - \bar{\theta}_{m'}) & \text{if MLE-Bayes.} & \text{(2.2.4.3)}
+\end{array}
+\right.
+\tag{2.2.4}
+$$
+By now, it should come as no surprise that the conceptual output of function 2.2.4 differs across approaches, where Frequentists rely on formula 2.2.4.1 and 2.2.4.2, while MLE-Bayesians would apply 2.2.4.3. Again, formula 2.2.4.1 applies Bessel's correction to create an unbiased *estimator of the covariance in the population* (i.e., $\hat{\sigma}_{OLS[\theta_m, \theta_{m'}]}$, with $\mathbb{E}(\hat{\sigma}_{OLS[\theta_m, \theta_{m'}]}) = \sigma_{\theta_m, \theta_{m'}}$). Conceptually speaking, Frequentists applying formula 2.2.4.1 are thus interested in an *estimate of the population covariance* ($\hat{\sigma}_{\theta_m, \theta_{m'}}$). Bessel's correction is again only applied when in possession of a sample, and with population data, Frequentists apply formula 2.2.4.2 to calculate the *population covariance* (i.e., $\sigma_{\theta_m, \theta_{m'}}$), since the mean of each manifestation is known.
+
+By contrast, MLE-Bayesians are interested in the *sample covariance* (i.e., $s_{\theta_m, \theta_{m'}}$) and so do *not* apply Bessel's correction. Researchers applying either formula 2.2.4.2 or 2.2.4.3 can alternatively be said to rely on a maximum-likelihood estimator (i.e., $\hat{\sigma}_{MLE[\theta_m, \theta_{m'}]}$), though non-MLE Bayesians generally substitute formula 2.2.4.3 with MCMC methods for its aforementioned advantages. Consistent with existing implementations [@IBM2025; @Revelle2025], the Frequentist nature of the current KMO index is thus further corroborated due to calculating an *estimate of the population variance* ($\hat{\sigma}_{\theta_m, \theta_{m'}}$) by relying on formula 2.2.4.1 for function 2.2.4.
+
+Let $\text{Cor}(\theta_m, \theta_m')$ then denote the piecewise function for calculating the *Pearson product-moment correlation coefficients* [cf. @Bravais1844; @Pearson1895a; @Stigler1989] between manifestation $m$ and $m'$, which when applied between the $k$ manifestations in $\mathcal{D}$ can be used to construct a *correlation matrix*. This matrix, whose rows are indexed by $i$ and columns by $j$, is composed of $k^2$ correlation coefficients. Given the obvious conceptual differences across and within the statistical approaches, the correlation matrix will be denoted $\hat{P}$ if relying on Frequentist estimators for a sample, $P$ if the data is the population, and $R$ if relying on equations preferable for the MLE-Bayesian approach. With this denotation in mind, the correlation coefficients are calculated using the following formula [cf. @Field2018: 338-340; @StockAndWatson2019: 71; @Wooldridge2019: 698-699]:
+$$
+\text{Cor}(\theta_m, \theta_m') =
+\left\{
+\begin{array}{lll}
+  \hat{\rho}_{mm'} = \frac{\hat{\sigma}_{\theta_m, \theta_{m'}}}{\hat{\sigma}_m \hat{\sigma}_{m'}} & \text{if Freq.} \land n < N & \text{(2.2.5.1)} \\
+  \rho_{mm'} = \frac{\sigma_{\theta_m, \theta_{m'}}}{\sigma_m \sigma_{m'}} & \text{if Freq.} \land n = N & \text{(2.2.5.2)} \\
+  r_{mm'} = \frac{s_{\theta_m, \theta_{m'}}}{s_m s_{m'}} & \text{if MLE-Bayes.} & \text{(2.2.5.3)}
+\end{array}
+\right.
+\tag{2.2.5}
+$$
+where the statistical framework and data used for $\text{Cov}(\theta_m, \theta_{m'})$ and $\text{SD}(\theta_m)$ determine whether function 2.2.5 results in an $\hat{P}$, $P$, or $R$. Given the aforementioned conceptualizations, $\hat{\rho}$ is the *estimated correlation in the population*, $\rho$ is the *correlation in the population*, and $r$ is the *correlation in the sample*.
+
+Researchers should again note that while applying Bessel's correction makes the estimator of the variance and covariance unbiased, conceptualizing 2.2.5.1 as an OLS-estimator of the population correlation (i.e., $\hat{\rho}_{OLS[mm']}$) does *not* yield an unbiased estimator of the population correlation (i.e., $\mathbb{E}(\hat{\rho}_{OLS[mm']}) \neq \rho_{mm'}$). While corrections to the correlation coefficient (or versions thereof) have been proposed, for example, Kelley's [-@Kelley1935] $\epsilon$, Hays' [-@Hays1963] $\omega$, or *regularized* estimation [@SchaeferAndStrimmer2005], the literature lacks consensus on whether any of these are properly unbiased [e.g., @AlbersAndLakens2018; @CarrollAndNordholm1975; @Mordkoff2019], and since the typical calculation of the KMO index does *not* make any adjustments besides applying Bessel's correction for the aforementioned functions, these will *not* be further covered here.
+
+By comparison, this issue of 'unbiasedness' can be avoided with formula 2.2.5.2, which calculates the *population correlation* (i.e., $\rho_{mm'}$) when in possession of population data. A conceptual alternative is formula 2.2.5.3, preferable to MLE-Bayesians, which calculates the *correlation in the sample* ($r_{mm'}$, alternatively conceptualized as $\hat{\rho}_{MLE[mm']}$). The latter can again be expanded to estimate the entire posterior distribution and include prior information with the use of MCMC methods. Consistent with the use of Frequentist estimators to calculate the covariance and standard deviation [@DziubanAndShirkey1974; @IBM2025; @Revelle2025], the KMO index is conceptually Frequentist and relies on the calculation of the *estimated correlation matrix in the population* ($\hat{P}$), applying the biased formula 2.2.5.1 for function 2.2.5.
+
+Finally, let $\text{Cor}_q(\theta_m, \theta_{m'})$ denote the function for calculating the *anti-image correlations* between manifestation $m$ and $m'$, which essentially is the 'unique' part of a correlation that remains after having accounted for the 'shared' part between correlations. Again, when applied to every manifestation in $\mathcal{D}$, the resulting $k^2$ correlations can be used to construct an *anti-image correlation matrix* [consistent with @Kaiser1970: 405; @KaiserAndRice1974: 113-114; @Kaiser1981: 379]. These can be calculated directly from the rows and columns of the correlation matrix:
+$$
+\text{Cor}_q(\theta_m, \theta_m') =
+\left\{
+\begin{array}{lll}
+  \hat{\rho}_{q[i,j]} = -\frac{\hat{\rho}_{i,j}^{-1}}{\sqrt{\hat{\rho}_{ii}^{-1}\hat{\rho}_{jj}^{-1}}} & \text{if Freq.} \land n < N & \text{(2.2.6.1)} \\
+  \rho_{q[i,j]} = -\frac{\rho_{i,j}^{-1}}{\sqrt{\rho_{ii}^{-1}\rho_{jj}^{-1}}} & \text{if Freq.} \land n = N & \text{(2.2.6.2)} \\
+  \textit{r}_{q[i,j]} = -\frac{\textit{r}_{i,j}^{-1}}{\sqrt{\textit{r}_{ii}^{-1}\textit{r}_{jj}^{-1}}} & \text{if MLE-Bayes.} & \text{(2.2.6.3)}
+\end{array}
+\right.
+\tag{2.2.6}
+$$
+Again, the conceptual output of $\text{Cor}_q(\theta_m, \theta_{m'})$ depends entirely on the used statistical framework and data, with $\hat{P}_q$ being the *estimated anti-image correlation matrix in the population*, whose elements are given by formula 2.2.6.1, while $P_q$ denotes the *anti-image correlation matrix in the population*, and formula 2.2.6.2 is thus used for population data. MLE-Bayesians can conceptualize the output of $\text{Cor}_q(\theta_m, \theta_{m'})$ as $\textit{R}_q$ to denote the *anti-image correlation matrix in the sample*, with elements given by formula 2.2.6.3. In line with the previous considerations, it is apparent that this Frequentist KMO index conceptually involves the *estimated anti-image correlation in the population* ($\hat{P}_q$) through its reliance on formula 2.2.6.1 for function 2.2.6 [cf. @DziubanAndShirkey1974; @IBM2025; @Revelle2025].
+
+For all these conceptualizations, it should be noted that the calculation of $\text{Cor}_q(\theta_m, \theta_{m'})$ necessitates that the correlation matrix is *positive definite* because it relies on the calculation of the *inverse correlation matrix* [cf. @KaiserAndRice1974: 113], whose components are denoted as $\hat{\rho}^{-1}$, $\rho^{-1}$, and $r^{-1}$ in formula 2.2.6.1 - 2.2.6.3, respectively. This necessity is the reason why the aforementioned stipulations of the data matrix ($\mathcal{D}$) in section \ref{sec:sec_kmo_data} explicitly specified that the manifest phenomena were all physically distinct (i.e., $\forall \theta_m (\theta_m \neq \theta_{m'})$), because any instance of *perfect multicollinearity* in the correlation matrix makes it non-invertible. Another requirement is that piecewise functions 2.2.1 - 2.2.6 all require complete data, meaning that no data can be missing. While Kaiser and Rice [-@KaiserAndRice1974: 113] recommend using *mean imputation* to handle missing values, an arguably more appropriate procedure would involve *multiple imputations by chained equations* [MICE, see @VanBuurenAndGoothuisOudshoorn2011] to improve imputation accuracy and account for imperfect imputations.
+$$
+\text{KMO}(\mathcal{D}) =
+\left\{
+\begin{array}{lll}
+\hat{\alpha} = \frac{\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{i,j}}{\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{i,j} + \underset{i \neq j}{\sum \sum} \hat{\rho}_{q[i,j]}^2} & \text{if Freq.} \land n < N & \text{(2.2.7.1)} \\
+\alpha = \frac{\underset{i \neq j}{\sum \sum} \rho^2_{i,j}}{\underset{i \neq j}{\sum \sum} \rho^2_{i,j} + \underset{i \neq j}{\sum \sum} \rho_{q[i,j]}^2} & \text{if Freq.} \land n = N & \text{(2.2.7.2)} \\
+a = \frac{\underset{i \neq j}{\sum \sum} r^2_{i,j}}{\underset{i \neq j}{\sum \sum} r^2_{i,j} + \underset{i \neq j}{\sum \sum} r_{q[i,j]}^2} & \text{if MLE-Bayes.} & \text{(2.2.7.3)}
+\end{array}
+\right.
+\tag{2.2.7}
+$$
+Now, using the values computed from these standard formula, let $\text{KMO}(\mathcal{D})$ denote the piecewise function for calculating the overall 'sampling adequacy' of a data matrix [@KaiserAndRice1974: 112-113; consistent with @DziubanAndShirkey1974; @IBM2025; @Revelle2025]. Since it has become apparent that the functions involved in the calculation of the KMO index differ in conceptualization and mathematical formula, $\text{KMO}(\mathcal{D})$ can account for these variations and be expressed as function 2.2.7. Here, $\sum \sum$ denotes the row-wise summation operation, $\hat{\alpha}$ denotes the *estimated sampling $\alpha$dequacy in the population* (formula 2.2.7.1), $\alpha$ denotes the *sampling $\alpha$dequacy in the population* (formula 2.2.7.2), and *a* denotes the *sampling $a$dequacy in the sample* (formula 2.2.7.3), which help distinguish the nuances of the otherwise same concept of a *Measure of Sampling Adequacy* [MSA, cf. @Kaiser1970; @KaiserAndRice1974; @Kaiser1981]. Calculating the individual KMO indices, that is, the MSA of manifestation $m$ in the data ($\mathcal{D}_m$) is given by the similarly conceptually-distinguishing piecewise function:
+$$
+\text{KMO}(\mathcal{D}_m) =
+\left\{
+\begin{array}{lll}
+\hat{\alpha}_m = \frac{\sum_{j, j \neq i} \hat{\rho}^2_{i,j}}{\sum_{j, j \neq i} \hat{\rho}^2_{i,j} +\sum_{j, j \neq i} \hat{\rho}^2_{q[i,j]}}  & \text{if Freq.} \land n < N & \text{(2.2.8.1)} \\
+\alpha_m = \frac{\sum_{j, j \neq i} \rho_{i,j}^2}{\sum_{j, j \neq i} \rho_{i,j}^2 +\sum_{j, j \neq i} \rho^2_{q[i,j]}} & \text{if Freq.} \land n = N & \text{(2.2.8.2)} \\
+a_m = \frac{\sum_{j, j \neq i} r_{i,j}^2}{\sum_{j, j \neq i} r_{i,j}^2 +\sum_{j, j \neq i} r^2_{q[i,j]}} & \text{if MLE-Bayes.} & \text{(2.2.8.3)}
+\end{array}
+\right.
+\tag{2.2.8}
+$$
+The reason for distinguishing between the the varying conceptual outputs produced by the formula in function 2.2.7 and 2.2.8 should have been made apparent based on the discussion of the different concepts and formula involved in their calculation. While it will here be left to the discretion of the researcher to determine whether they are interested in assessing the 'sampling adequacy in the population' (i.e., formula 2.2.7.1 - 2.2.7.2) or the 'sampling adequacy in the sample' (i.e., formula 2.2.7.3), the latter MLE-Bayesian conceptualization of a KMO index, despite applying different formula, does *prima facie* appear to be more consistent with the original conceptual intentions of the KMO index [see @Kaiser1970; @KaiserAndRice1974; @Kaiser1981]. Accordingly, re-conceptualizing the KMO index with the Bayesian framework can be considered entirely appropriate.
+
+
+## Interpretation {#sec:sec_kmo_interpretation}
+
+Irrespective of conceptualization or formula, the 'sampling adequacy' measured by the KMO index can be meaningfully interpreted as the ratio of the sum of squared common (i.e., non-unique) inter-correlations relative to the sum of the squared common (non-unique) and unique (i.e., non-common) inter-correlations. This makes the KMO index continuous ($\text{KMO} \in \mathbb{R}$), where a value of .5 occurs when the sum of squared common inter-correlations are equal to the sum of the squared unique inter-correlations [cf. @KaiserAndRice1974: 113].
+
+Regarding the theoretical lower and upper bounds of the KMO index, there have been made numerous conflicting claims. Early researchers assert that its bounds are 0 and 1 [@DziubanAndShirkey1974: 359; @KaiserAndRice1974: 113], where a value of 0 would indicate that 'the sum of [squared unique inter-, ed.] correlations is large relative to the sum of [squared inter-, ed.] correlations, indicating diffusion in the pattern of correlations' [@Field2018: 798], while a value close to 1 would indicate that 'patterns of correlations are relatively compact and so factor analysis should yield distinct and reliable factors.' [@Field2018: 798]. These bounds were challenged by @ShirkeyAndDzuban1976, who by simulating independent variables mostly failed to produce KMO indices below .5 [as cited in @Kaiser1981: 380]. By comparison, examinations of real-world data from @ArmstrongAndSoelberg1968 and @Harman1967, yielded a KMO index as low as .42 [@DziubanAndShirkey1974: 359] and as high as .93 [@DziubanAndShirkey1974: 360], respectively. In an attempt to fix what was perceived as non-intuitive bounds, @Kaiser1981 abandoned the 'Mark IV' revision [i.e., @KaiserAndRice1974] in favor of the original 'Mark II' version [i.e., @Kaiser1970], whose lower bound instead was negative [@Kaiser1981: 381]. To increase interpretation, however, @Kaiser1981 revised the KMO index as the square-root of the original, but this inadvertently meant that the lower bound became an *imaginary number* [@Kaiser1981: 381; cf. @Nahin1998], and perhaps, in part, for this reason, this 'Mark V' failed to gain traction in the literature.^[For researchers interested in these mostly forgotten versions of the KMO index, their mathematical formula, and functions implementing them in R, are provided in section \ref{sec:sec_msa_appendix} of the Appendix.]
+
+To solve this continuing discrepancy and obtain more clarity about the theoretical bounds of the 'Mark IV' KMO index [i.e., @KaiserAndRice1974], which in turn will be informative about the bounds of the Bayesian KMO index, this paper makes some analytic observations and briefly investigates the sampling behavior of the KMO index using a series of *Monte Carlo* simulations [@RobertAndCasella2013; @RubinsteinAndKroese2016]. These were partly motivated by Kaiser's [-@Kaiser1970: 405] statements about 'Mark II' [i.e., @Kaiser1970] that, *ceteris paribus*, the value of the KMO index increases as a function of $n$, $k$, and $\text{Cor}(\theta_m, \theta_{m'})$, while it decreases as a function of $\text{Cor}_q(\theta_m, \theta_{m'})$. Following this, `r (posterior_samples*12) %>% qformat()` simulations were conducted that directly manipulated the dependency structure of the correlation matrix, the magnitude and direction of the correlations, and the number of theorized manifestations (i.e., $k$), which enabled gauging the association between the common and unique correlations, and the values of the KMO index under codependent and independent (i.e., random) correlation structures, expanding upon the simulation study by @ShirkeyAndDzuban1976.
+
+Before consulting the simulated results, the analytic observations made were these: It can be stated that for any correlation matrix, which besides the diagonal, consists entirely of inter-correlations of zero, the KMO index is *undefined* for the real number system, because the formula in function 2.2.7 used in its calculation then involves a division by zero. Similarly, for any correlation matrix, which besides the diagonal, consists entirely of inter-correlations of one, the KMO index is undefined, because the correlation matrix is *singular* [as also observed by @KaiserAndRice1974: 114]. This means that perfectly independent and codependent correlation matrices that could intuitively constitute a lower and upper bound does *not* yield a KMO index of 0 and 1, respectively.
+
+These insights are complimented by the simulations, which reveal that the association between the correlation matrix and anti-image correlation matrix is non-monotonous and complex, being independent, positive, and negative under different circumstances. This means that an increase in the correlations of the correlation matrix does *not* necessarily lead to an improved KMO index because the unique correlations in the anti-image correlation matrix may similarly increase. This complexity may be a cause of why the lower bound of data matrices with 'bad' sampling adequacy often yield a KMO index of .5. Regarding the theoretical bounds, the lowest calculated KMO index was $2.54e^{-09}$, while the highest was $9.98e^{-01}$ (for more information, see Section \ref{sec:sec_monte_carlo_appendix} of the Appendix).
+
+These results are consistent with the earliest claims that the theoretical bounds of the KMO index are indeed 0 and 1 (i.e., $\text{KMO} \in \mathbb{R}^{[0; 1]}$, though $\text{KMO} \in \mathbb{R}^{(0; 1)}$ remains possible). However, they also corroborate the claim that values below .5 and values close to 1 (e.g., > .95) are highly unlikely [cf. @Field2018: 798], occurring across the simulations at a frequency of 6.02% and 3.03%, respectively. Another key insight is that a KMO index of exactly .5 is a highly possible outcome, occurring across the simulations at a frequency of 83.2%. Since this value occurred consistently and almost irrespective of how 'good' or 'bad' the inter-correlations were, a KMO index value of .5 can be taken to provide indecisive information in an assessment of the 'sampling adequacy' of the data matrix, which will be considered later when discussing inference in relation to the KMO index. Taken together, and with the mentioned caveats in mind, higher values of the KMO index thus generally indicate a greater percentage of shared information between the theorized manifestations, which is desirable for an EFA.
+
+To help researchers make discrete decisions of 'sampling adequacy', guidelines by [@Kaiser1974], reproduced in table \@ref(tab:kmo-interpretive-guidelines-table), are often referenced when interpreting the KMO index [e.g., @DziubanAndShirkey1974: 359; @Revelle2025]. While these guidelines may be appropriate for interpreting it, they were *not* originally formulated in relation to the KMO index. In the paper referenced as the source of these guidelines [i.e., @Kaiser1974; cf. @DziubanAndShirkey1974: 359; @Revelle2025], Kaiser explicitly introduces them for a separate *Index of Factor Simplicity* [IFS, @Kaiser1974: 35; see also @KaiserAndRice1974: 112], and the only relationship between these guidelines and 'sampling adequacy' is that the IFS is partly based on the KMO index [see @KaiserAndRice1974]. Instead, in the original version of the KMO index, Kaiser [-@Kaiser1970: 405] states that 'good factor-analytic data' requires a KMO index of at least .8, while 'really excellent data' only occurs with a KMO index of at least .9. Whether these generalize to the 'Mark IV' of the KMO index is *not* mentioned in @KaiserAndRice1974, and @Kaiser1981 fails to comment on Dziuban and Shirkey's [-@DziubanAndShirkey1974: 359] use of the IFS-guidelines for interpreting the KMO index. However, given that Kaiser acknowledges the substantial differences between 'Mark II' and 'Mark IV' [@Kaiser1981: 380-381], it is unlikely that he would favor interpreting them using the same guidelines.
+```{r kmo-interpretive-guidelines-table}
+data.frame(
+  KMO = c("$1 \\geq IFS \\geq .9$", "$.9 > IFS \\geq .8$", "$.8 > IFS \\geq .7$", "$.7 > IFS \\geq .6$", "$.6 > IFS \\geq .5$", "$.5 > IFS \\geq 0$"),
+  Interpretation = c("'Marvelous'", "'Mertitourious'", "'Middling'", "'Mediocre'", "'Miserable'", "'Unacceptable'")
+) %>%
+  knitr::kable(
+    #format = "simple",
+    digits = digits$table,
+    row.names = FALSE,
+    booktabs = TRUE,
+    caption = ("Interpretive Guidelines Wrongly Associated with the KMO index"),
+    format.args = list(
+      big.mark = ",",
+      scientific = FALSE
+    ),
+    escape = FALSE,
+    align = "c"
+  ) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    fixed_thead = TRUE,
+    latex_options = c("striped", "HOLD_position", "repeat_header")
+  )
+```
+\vspace{-1.5em}
+\begingroup
+\noindent
+\fontsize{8pt}{10pt}\selectfont
+\linespread{1}\selectfont
+**NOTE:** Interpretive guidelines developed for the *Index of Factor Simplicity* [IFS, @Kaiser1974: 35; see also @KaiserAndRice1974: 112], which are often incorrectly associated with the KMO index [e.g., @DziubanAndShirkey1974: 359; @Revelle2025].
+\endgroup
+\vspace{1em}
+
+While it can be useful to develop interpretive heuristics, instead of developing them entirely on a theoretical basis and applying them across fields indiscriminately [e.g., @Cohen1988], one could argue that they should instead be empirically based and specified to suit the particular contexts of each field [cf. @FunderAndOzer2019; @GignacAndSzodorai2016; @LovakovAndAgadullina2021]. The currently missing guidelines for interpreting the KMO index could thus be addressed through an empirical examination of KMO indices in the literature, with interpretive guidelines being specified for each particular field. At the same time, one could also argue that the discretization involved in producing such rules-of-thumb of a continuous measure likely oversimplifies interpretation [cf. @Field2018: 117], and researchers should thus ideally use guidelines with caution and report non-discretized KMO-indices. It is left to the reader's discretion which of these perspectives to take, and this study makes no attempt to empirically derive guidelines for interpreting the KMO index. To more practically illustrate the utility of the KMO index, an example using simulated data is provided in the subsequent section.
+
+
+## Example {#sec:sec_kmo_example}
+
+In line with the aforementioned stipulations in section \ref{sec:sec_kmo_data}, a `r sample_size %>% qformat()` $\cdot$ `r n_manifestations` data matrix is simulated using *Monte Carlo* methods [cf. @RubinsteinAndKroese2016], which, to abide by the *open science standard* [cf. @Christensenetal2019], is done with the *R programming language*^[For software specifications, see Section \ref{sec:sec_software_appendix} of the Appendix] [@RCoreTeam2025]. The latent phenomenon is generated with the parameter specifications: $\forall \nu_u(\nu_u = 0),  \sigma = 1$, while its manifestations are generated with the specifications: $\forall \theta_m(\tau_m = 0, \lambda_m \overset{iid}{\sim} \mathcal{U}(.3, .7), \varsigma_m = 1)$, with $\mathcal{U}$ being the *uniform distribution* [cf. @McElreath2019: 36]. While the specification of `r n_manifestations %>% qformat()` manifestations is rather arbitrary and merely serves to help demonstrate a computation of the KMO index, this number has previously been considered adequate for reliably measuring latent phenomena [e.g., @AshtonAndLee2009]. The *smallest effect size of interest* [SESOI, see @Lakens2017] is specified to be `r sesoi %>% round_up(digits = 1)`, since, for simplicity, this constitutes a general threshold for the lowest factor loading of interest [cf. @Field2018: 806]. Similarly, the specified sample size of `r sample_size %>% qformat()` is also arbitrary, though in relation to EFA, it has been interpreted as 'excellent' [@ComreyAndLee1992; @Field2018: 797], and it provides a `r power_sesoi` *statistical power* [see @Cohen1988; @Cohen1991] to detect a factor loading as low as `r sesoi %>% round_up(digits = 1)`, which can be considered more than 'adequate' [cf. @Cohen1988; @Cohen1991]. At the same time, with this sample size one can expectly (i.e., with 80% confidence) detect factor loadings as low as `r sesed`. The upper threshold of a factor loading is specified to be .7 to mitigate *multicollinearity* among the `r n_manifestations %>% qformat()` manifestations [cf. @Field2018: 799; @McElreath2019], which could otherwise make the correlation matrix non-positive definite, thus making the KMO index undefined. Computing the *variance inflation factor* [VIF, @Jamesetal2017; @Luedeckeetal2021; @Snee1981] from an OLS model predicting the first manifestation using all other manifestations reveal that multicollinearity in this simulated data is interpretable as '`r vifs_interpretation %>% unique()`' [i.e., `r lowest_vif`, @Benshacharetal2020; @Zuuretal2010].
+
+To ease model specification [cf. @McElreath2019: 111], all measures are transformed using *Fisher z-scoring* [henceforth *standardization*, cf. @Field2018: 37; @StockAndWatson2019: 65; @Wooldridge2019: 696-697]. In line with the ongoing conceptual distinction of formula between statistical frameworks, let $\text{Z}(\theta_m)$ denote the piecewise function for standardizing manifestation $m$:
+$$
+\text{Z}(\theta_m) =
+\left\{
+\begin{array}{lll}
+  \frac{\theta_{u,m} - \hat{\mu}_m}{\hat{\sigma}_m} & \text{if Freq.} \land n < N & \text{(2.4.1.1)} \\
+  \frac{\theta_{u,m} - \mu_m}{\sigma_m} & \text{if Freq.} \land n = N & \text{(2.4.1.2)} \\
+  \frac{\theta_{u,m} - \bar{\theta}_m}{s_m} & \text{if MLE-Bayes.} & \text{(2.4.1.3)}
+\end{array}
+\right.
+\tag{2.4.1}
+$$
+Function 2.4.1 makes it evident that the conceptualization of standardization varies across approaches, with formula 2.4.1.1 being a Frequentist standardization based on the *estimated mean* (i.e., $\hat{\mu}_m$) and *(biased) standard deviation* (i.e., $\hat{\sigma}_m$) *of the population*. Formula 2.4.1.2 is similarly Frequentist and is used with population data, with standardization being based on the *mean* (i.e., $\mu_m$) and *standard deviation* (i.e., $\sigma_m$) *of the population*. By contrast, formula 2.4.1.3 can be considered MLE-Bayesian, with the standardization being based on the *mean* (i.e., $\bar{\theta}_m$) and *standard deviation* (i.e., $s_m$) *of the sample*. This could again be made 'properly' Bayesian using MCMC methods, though that will be beyond the scope of this paper. For conceptual clarity, this demonstration of the Frequentist KMO index uses formula 2.4.1.1 for function 2.4.1, and preprocessing each manifestation using standardization simplifies the calculation and illustration of the correlation matrix because it becomes equivalent to the variance-covariance matrix (i.e., $\text{Cov}(\text{Z}(\theta_m), \text{Z}(\theta_{m'})) = \text{Cor}(\text{Z}(\theta_m), \text{Z}(\theta_{m'}))$).
+
+To help illustrate the usefulness of standardization and express the statistical model that implicitly underlies the calculation of the KMO index, which will prove important when discussing robustness and inferential viability, in line with Kruschke [-@Kruschke2014], numerous functions can be conceptualized as special cases of the *Generalized Linear Model* [GLM, see also @Field2018], and the correlations of a correlation matrix are no exception. For reasons that will become apparent when conceptualizing a Bayesian KMO index, a GLM-expression of the correlations of a correlation matrix, using notation based on Richard McElreath [-@McElreath2019: 441-442], is provided in model 2.4.2.
+```{=latex}
+\begin{gather*}
+\tag{2.4.2}
+\theta_u | \mu_u, \Sigma \overset{iid}{\sim} \mathcal{MVN}(\mu_u, \Sigma) \; \text{for} \: u \: \text{in 1, } \dots \text{, } n \\
+\Sigma = \text{DRD} \\
+\mu_u = 0 \; \text{for all} \: u \\
+\text{diag(D)} = 1
+\end{gather*}
+```
+In model 2.10 the rows ($u$) of the set of manifestations ($\theta_m$) are taken to be *iid* as a conditionally *multivariate normal* distribution [i.e., $\mathcal{MVN}$, @McElreath2019: 441-442; @Gelmanetal2014: 582]. Due to the standardization, the mean across the set of theorized manifestations is invariably zero, while the diagonal of the dispersion matrix, $\text{diag(D)}$, is invariably 1, which due to becoming an identity matrix then simplifies the variance-covariance matrix ($\Sigma$) to the correlation matrix (i.e., $\text{R}$). As such, due to the standardization, the estimands of the model become solely the correlations. Once the correlations are used to construct the correlation matrix, the anti-image correlation matrix can be computed, and from these the overall and individual KMO indices can be derived. Using the conceptually Frequentist formula, a matrix of the correlations (i.e, $\hat{P}$), anti-image correlations (i.e, $\hat{P}_q$), and the KMO indices, calculated from the simulated data, is provided for ease of overview in table \@ref(tab:cor-parcor-table) in section \ref{sec:sec_simulated_correlation_matrix_appendix} of the Appendix.
+
+The overall KMO index of this simulated data is `r kmo_indices$MSA %>% round_down(digits = digits$text)`, which is indicative of a relatively small diffusion in the correlations, consistent with either a relatively low noise or few latent factors. This means that by calculating the KMO index, the researcher obtains information that enables them to consider the 'sampling adequacy' of the data matrix to be fit for an EFA and to expect few latent factors. As such, the KMO index is demonstratively useful for obtaining relevant information about the factor structure prior to a factor analysis. By now, the reader should have been made familiar with the KMO index, its calculation, Frequentist conceptualization, interpretation and usefulness, which can be leveraged for a discussion of its robustness and use in relation to inference.
+
+
+## Robustness {#sec:sec_kmo_robustness}
+
+This section on robustness, and the subsequent section on inference, will clarify why the arguably strict stipulations were necessary when specifying the data matrix in section \ref{sec:sec_kmo_data}. While those stipulations by definition hold for data simulated under such specifications, for any real-world data, they merely constitute assumptions that may be violated, and should this be the case, the conclusions regarding the 'sampling adequacy' of a data matrix provided by the KMO index may be incorrect.
+
+A simple solution to make the KMO index more robust to violations of assumptions is by relaxing the assumption that the theorized manifestations are endogenous as a linear function of the latent phenomenon, which is relevant, since relations between many real-world phenomena are non-linear [e.g., @Kruschke2014: 424]. This can be accomplished by transforming the measured manifestations into *ranks* [cf. @Field2018: 284], followed by applying the aforementioned standardization function 2.4.1 covered in section \ref{sec:sec_kmo_example}. This joint rescaling-procedure, henceforth denoted *rank-standardization*, effectively transforms the Pearson's product-moment correlation coefficients into Spearman's [-@Spearman1904] *rank correlation coefficients* [cf. @Field2018: 351-352; @Spearman1910]. Such a rescaling-procedure can be shown by letting $Rank(\theta_m)$ denote the *ranking function* [cf. @Field2018: 288; @RCoreTeam2025]:
+$$
+\text{Rank}(\theta_m) = \frac{1 + \#\{ l \mid x_l < \theta_{u,m} \} + \#\{ l \mid x_l \le \theta_{u,m} \}}{2} \tag{2.5.1}
+$$
+where $\#\{ l \mid x_l < \theta_{u,m} \}$ expresses the counts less than the $u$th value of manifestation $m$ and $\#\{ l \mid x_l \le \theta_{u,m} \}$ expresses the counts less than or equal to the $u$th value of manifestation $m$, which together with the division by 2 serves to account for ties through averaging. Then, let $Z_{rank}(\theta_m)$ denote the *rank-standardization function* of manifestation $m$, and while its conceptual output, similar to equation 2.4.1, varies across statistical approaches, it can be specified irrespective of framework as:
+$$
+\text{Z}_\text{rank}(\theta_m) = \frac{\text{Rank}(\theta_m)_u - \text{Mean}(\text{Rank}(\theta_m))}{\text{SD}(\text{Rank}(\theta_m))} \tag{2.5.2}
+$$
+Calculating the KMO index on data transformed in this manner enables it to capture 'sampling adequacy' in relation to *ordinal* relationships, which unlike Pearson's product-moment correlation coefficient does *not* require linear relationships between the latent phenomenon and its manifestations. Instead, it merely requires the relationships between the theorized manifestations and the latent phenomenon to be *monotonous* [cf. @ClaphamAndNicholson2014]. Researchers may be unsure when to apply such a transformation, but in the event of linearity, Spearman's rank correlation coefficient approximates Pearson's product-moment correlation coefficient, so researchers could by default do rank-standardization and compare results with and without this rescaling-procedure.^[An alternative to Spearman's rank correlation coefficient is Kendall's [-@Kendall1938] $\tau$, which despite providing more conservative estimates of correlation [@Field2018: 353; @Howell2012] is harder to meaningfully interpret, and comparability with the aforementioned coefficients is mostly lost [@Field2018: 363; @Strahan1982; though see @Moran1948].] For the above example, rank-standardizing every manifestation in the data matrix and then calculating the KMO index yields an overall KMO of `r kmo_indices_ranked$MSA %>% round_down(digits = digits$text)`. The negligible difference between this result and the previous linear-dependent result (i.e., $\Delta$`r (kmo_indices$MSA-kmo_indices_ranked$MSA) %>% round_down(digits = digits$text)`) can be interpreted as being consistent with linearity of the functional form underlying the relationship between the latent phenomenon and the theorized manifestations. Besides assumptions of functional form, robustness can also be discussed in relation to inferential viability.
+
+
+## Inference {#sec:sec_kmo_inference}
+
+While inferential statements are seldom made in relation to the KMO index, these can be useful to express uncertainty about the estimated 'sampling adequacy' of a data matrix. The absence of such practices may be due to a lack of knowledge about the sampling distribution of the KMO index, which makes it difficult to make inferential statements about it. However, researchers with adequately large samples that are representative of the population of interest can easily overcome this limitation with the *non-parametric bootstrap* [@Efron1979; @Efron2003; @EfronAndTibshirani1994]. Here, the data matrix ($\mathcal{D}$) can be permuted an adequate number of times, that is, re-sampling the data with replacement, to produce a distribution of counterfactually sampled data matrices. From each data matrix, an overall and $k$ individual KMO indices (one for each manifestation) can be calculated by applying function 2.2.7 and function 2.2.8 for each permutation, to produce approximations of the sampling distributions of the overall and individual KMO indices. Probability statements subject to the limitations of Frequentism [cf. @Cohen1994; @Kruschke2014; @Wagenmakersetal2010] can then be made, for example, in the form of *p*-values [cf. @StockAndWatson2019: 110-117] and/or 95% *confidence intervals* [CI, @StockAndWatson2019: 117-118]. While Frequentist inferential statements may *not* necessarily be appropriate within the context of a *exploratory* factor analysis, because they are *confirmatory* and assume *a priori* specified hypotheses, they could be considered useful in relation to a *Confirmatory Factor Analysis* [CFA, @Brown2015], where prespecified hypotheses of the 'sampling adequacy' of a data matrix can be tested prior to testing hypotheses about factor loadings and model structure. Since the sampling adequacy matters just as much for a CFA as for an EFA, such hypotheses are relevant for applied research, and the evidence provided by this procedure can corroborate the conclusion that the data matrix is factorable at the population level and appropriate for a factor analysis.
+
+An example of applying the Frequentist *Null Hypothesis Significance Testing* [NHST, cf. @Field2018: 72-90; @Kruschke2014: 300-333] procedure to make inferential statements about the KMO index can be demonstrated for the previous example. Here, the *null hypothesis* ($H_0$) is stated to be $\text{KMO}_{\text{overall}} = .5$, which reflects the aforementioned 'indiscernible' value of the KMO index (see Section \ref{sec:sec_kmo_interpretation}), since researchers should preferably be able to eliminate the uncertainty expressed by this plausible value. As such, the *alternative hypothesis* ($H_a$) will state that $\text{KMO}_{\text{overall}} \neq .5$, and the rejection level for $H_0$ will be prespecified at the conventional 5% level. Here, the mean, *bias-reduced* [@Parketal2022; @ParkAndWang2020; @ParkAndWang2022] *standard error* [SE, @StockAndWatson2019: 113-114], and 95% *bias-corrected and accelerated interval* [BCa, @Efron1987] are calculated from `r posterior_samples %>% qformat()` permutations of the data. This number of permutations was chosen to help invoke the *law of large numbers* [cf. @AngristAndPischke2015: 13-16; @SenAndSinger1993; @StockAndWatson2019: 85-86] and was chosen for comparability with a later demonstration of the Bayesian KMO index (see Section \ref{sec:sec_bkmo_example}). This results in an overall KMO index of `r bootstrapped_kmo_overall`, where the SE and 95% BCa, given its Frequentist conceptualization, helps express the (sampling) uncertainty about the previously conceptualized *estimated sampling adequacy in the population* (i.e., $\hat{\alpha}_{OLS}$). Given that the estimated sampling distribution of the KMO index is with 95% confidence higher than a value of .5, this is consistent with the sampling adequacy being discernible, and the relatively high values are also consistent with a low level of diffusion in the correlations at the population level, suggesting that the data matrix is factorable and appropriate for a subsequent factor analysis.
+
+Having discussed robustness and demonstrated inference in relation to the KMO index, the viability of this approach can be discussed. The previously outlined stipulations regarding the data matrix (see Section \ref{sec:sec_kmo_data}) here prove detrimental. In relation to the model 2.4.2, which is often implicitly used when calculating the KMO index, its simple linear functional form assumes *iid* and fails to account for data characterized by a *clustered* structure [e.g., a *repeated-measures design*, @Sullivan2008], which could lead to biased results [cf. @StockAndWatson2019: 108] unless the model is appropriately modified. Another assumption reflected in the stipulation of the data matrix, is that the data must be a *random sample* [cf. @StockAndWatson2019: 108], which fits with the context of researchers often being limited to samples drawn from a population of interest. Violating this assumption can prevent inference of the KMO index to the intended population of interest and result in a *Type III* error [cf. @Gigerenzer2004: 599], though this issue is mitigated if the data *is* the population. Similarly, with an unrepresentative sample, the factor structure implied by the correlations used to calculate the KMO index may suffer from a wrongly estimated magnitude and direction [i.e., a *Type M* or *Type S* error, respectively, cf. @Gelmanetal2021: 59; @GelmanAndCarlin2014]. Furthermore, if the latent phenomenon violates the stipulation that the latent phenomenon is *exogenous* of confounders, its relationships with the theorized manifestations may be *spurious* [cf. @Gumbel1926] or *masked*/*suppressed* [@McElreath2019: 144-153; @LenzAndSahn2021], leading to *false positive* or *false negative* conclusions regarding the factor structure [i.e., a *Type I* and *Type II* error, respectively, cf. @NeymanAndPearson1933]. Accordingly, to ensure a valid and reliably KMO index, researchers should be wary of violating the stipulations made in section \ref{sec:sec_kmo_data}. Having thoroughly revisited the Frequentist KMO index, a Bayesian re-conceptualization can now be made.
+
+
+# Bayesian KMO {#sec:sec_bkmo}
+
+The first part of this paper (Section \ref{sec:sec_kmo}) revisited the classical KMO index [i.e., 'Little Jiffy, Mark IV', @KaiserAndRice1974], thoroughly reviewing its formula, robustness and viability for inference. By considering its calculation and conceptualization within different statistical frameworks, this KMO index was found to be Frequentist, leaving it incompatible with Bayesian inference. For the purposes of that review, the term 'MLE-Bayesian' was specifically introduced in section section \ref{sec:sec_kmo_formula} to jointly refer to a Likelihood-based conceptualization of the KMO index that could be considered Bayesian in the context of 'non-informative' priors and maximum-likelihood point estimators. While this served to build towards a possible Bayesian conceptualization, the formula and concepts specific to that terminology evidently failed to incorporate prior information and did not enable an estimation of the entire posterior distribution, making it somewhat 'improper' for Bayesian inference. In this section, the limitations of that MLE-Bayesian approach are solved by introducing an arguably more proper *Bayesian Kaiser-Meyer-Olkin index* (BKMO). This is accomplished by re-conceptualizing the KMO index through use of Bayes' theorem and discussing the specification of priors and the calculation of a posterior distribution (Section \ref{sec:sec_bkmo_conceptualization}), followed by an example demonstrating the computation of the BKMO (Section \ref{sec:sec_bkmo_example}).
+
+## Bayesian Re-Conceptualization {#sec:sec_bkmo_conceptualization}
+
+To re-conceptualize the KMO index in a 'proper' Bayesian manner, it is necessary to consider *Bayes' theorem* [@BayesAndPrice1763; @Laplace2009], which is the conceptual foundation of Bayesian inference [@Gelmanetal2014; @McElreath2019; @Kruschke2014]. This theorem can be formulated as [cf. @McElreath2019: 49]:
+$$
+P(a | b) = \frac{P(a)P(b | a)}{P(b)}
+\tag{3.1.1}
+$$
+where $P(b | a)$ is the *likelihood*, $P(b)$ is the *marginal likelihood*, $P(a)$ is the *prior*, and $P(a | b)$ is the *posterior.* Within Bayesian inference, $a$ and $b$ are often respectively conceptualized as the parameters and the data. This means that $P(b)$ is the marginal likelihood of the data, $P(a)$ is the probability of the parameter, and $P(b | a)$ is the likelihood of the data given the parameter. While this often leads researchers to conceptualize $P(a | b)$ as the 'probability of the parameter given the data' [e.g., @Kruschke2014], it is worth emphasizing that this posterior is entirely dependent on the prior, $P(a)$, and likelihood, $P(b | a)$, making conclusions sensitive to their specifications. Accordingly, the choices involved in specifying the prior and likelihood can be taken to reflect a *modeling* of the data that may impact the posterior, and since researchers could disagree about the choice of prior and likelihood, these choices may be a point of contention. To appropriately reflect this dependency, the posterior, $P(a | b)$, will be referred to as the *probability of the parameter given the (modeled) data*.
+
+Researchers working within the Frequentist and Likelihood-based frameworks should be familiar with the *likelihood*, $P(b | a)$, since this is the only parameter of Bayes' theorem that is explicitly used within these frameworks, specifically because these approaches require the specification of a likelihood distribution for the statistical models that aim to describe the data [cf. @Field2018; @King1998]. The Bayesian framework differs by instead considering the *posterior*, $P(a | b)$, to be of central interest. To enable its calculation, in addition to specifying a distribution for the likelihood, Bayesian researchers must also specify a distribution for the prior. A historical limitation of this Bayesian approach is that the *marginal likelihood*, $P(b)$, also needs to be calculated, which can be difficult, if not practically impossible, for complex statistical models, restricting its use to only the simplest of models [cf. @Kruschke2014: 115]. However, recent advances in *Markov-Chain Monte Carlo* methods [MCMC, @Brooksetal2011] have solved this limitation [cf. @Kruschke2014: 143-191], which enables entirely new applications of Bayesian inference. These advancements also makes a Bayesian re-conceptualization of the KMO index more viable, since it now can be relatively easily calculating with software implementing such MCMC methods.
+
+With Bayes' theorem in mind, $a$ and $b$ will thus here be respectively conceptualized as the 'sampling adequacy' and data matrix ($\mathcal{D}$), consistent with the denotation previously introduced for the MLE-Bayesian approach in section \ref{sec:sec_kmo_formula}. This is appropriate, since formula 2.2.8.3 in function 2.2.8 showed that $a$ is a parameter derivable from the common ($r$) and unique correlations ($r_q$), which both are derived from the data matrix ($\mathcal{D}$), and accordingly, $\mathcal{D}$ is conceptualized as $b$. $P(a)$ can then be conceptualized as the *prior probability of the 'sampling adequacy'*, i.e., the probability of the 'sampling adequacy' before observing the data matrix. $P(b)$ is the *marginal likelihood of the data matrix*, but as previously mentioned, this parameter can be mostly ignored due to the reliance on MCMC methods. With this in mind, $P(b|a)$ then reflects the *likelihood of the data matrix given the prior 'sampling adequacy'*. From this, it follows that the $P(a|b)$ can be conceptualized as the *posterior probability of the 'sampling adequacy'*, i.e., the probability of the 'sampling adequacy' given the (modeled) data.
+
+With the reliance on MCMC methods, researchers thus only need to specify the prior of the sampling adequacy, $P(a)$, and the likelihood of the data given the 'sampling adequacy', $P(b | a)$, to arrive at the posterior probability of the sampling adequacy, $P(a | b)$. However, considering the relatively abstract concept and interpretation of 'sampling adequacy' and the aforementioned confusion regarding its mathematical properties, researchers may not find it easy to specify a prior and likelihood distribution for it. These difficulties can be circumvented by recognizing that researchers need *not* necessarily specify a prior and likelihood for the KMO index *per se*, which is contrary to the specification of most statistical models in Bayesian inference [e.g., @McElreath2019; for an exception, see @Kruschke2014: 226-230]. This is possible because the KMO index is a deterministic function of the correlation matrix and anti-image correlation matrix, and with the anti-image correlation matrix similarly being derived from the correlation matrix, this means that the prior and likelihood need only be specified for the correlation matrix. Stated differently, *the prior and likelihood of the correlation matrix implies priors and likelihood of the anti-image correlation matrix and the KMO index*. Applying Bayesian inference in relation to the KMO index thus becomes a mere question of applying Bayesian inference in relation to a correlation matrix.
+
+In line with the above conceptualization of the correlations of the correlation matrix as being special cases of the GLM (see Section \ref{sec:sec_kmo_example}), a likelihood useful for deriving the posterior of a correlation matrix, and thus anti-image correlation matrix and 'sampling adequacy', is the aforementioned multivariate normal [$\mathcal{MVN}$, @McElreath2019: 441-442; @Gelmanetal2014: 582] that enables the calculation of correlations across a data matrix. With this likelihood distribution in mind, this leaves the question of specifying the priors for the correlations of the correlation matrix. A natural choice for a joint prior is the *Lewandowski-Kurowicka-Joe* distribution [$\mathcal{LKJ}$, @Lewandowskietal2009], which is an often used prior for correlation matrices in Bayesian inference [e.g., @Gelmanetal2014: 55-56; @Gelmanetal2021: 123-127]. The priors can be specified with this $\mathcal{LKJ}$ distribution through use of its single shape parameter (i.e., $\eta$), where higher values of this shape parameter produce less extreme correlations (e.g., -1 and 1) in the correlation matrix, and vice versa [cf. @McElreath2019: 442]. This means that the $\mathcal{LKJ}$ simultaneously specifies a prior for every correlation coefficient, making it easy for researchers to specify priors with many theorized manifestations.
+
+While this $\mathcal{LKJ}$ prior can be considered generally useful in relation to a Bayesian KMO index, it does *not* permit specifying individual priors for the correlation matrix. Since the KMO index is more commonly applied to *exploratory* rather than *confirmatory* factor analysis, researchers are here expected to *not* possess prior information that would enable discriminating between manifestations, making the $\mathcal{LKJ}$ prior appropriate for most practical uses. To reflect this lack of substantial prior information about the correlations, researchers should ideally specify the shape parameter to produce a 'weak' or 'non-informative' prior [@Gelmanetal2014: 51-56]. Here, in line with Gelman et al. [-@Gelmanetal2014: 51-52], the author recommends specifying the former type of prior, because 'non-informative' priors are typically specified using the uniform distribution ($\mathcal{U}$), which is technically an 'improper' probability distribution [cf. @Gelmanetal2014: 52], and in real-world applications, there is almost always some prior information that can be extrapolated from existing research and applied to the particular research context. For example, in relation to prior information on correlation coefficients between novel phenomena, extant research on correlation coefficients in the literature can be used to shape *realistic* prior expectations about these correlations [e.g., @FunderAndOzer2019; @LovakovAndAgadullina2021; @GignacAndSzodorai2016]. Should researchers nevertheless prefer 'non-informative' priors, alternatives to the uniform are recommended [@Gelmanetal2014: 51-55; @Jeffreys1946; @Kruschke2014: 293; @LeeAndWebb2005; @ZhuAndLu2004].
+
+Specifying 'weakly-informative' priors can be done in numerous ways. One approach involves specifying 'skeptical, yet persuadable' priors, whose distributions are deliberately conservative by expecting small correlations, but which remain wide enough to 'let data speak for itself'. Such priors can impact data in a manner similar to *regularization* and help prevent *overfitting*, which can improve the generalization of results [cf. @McElreath2019: 214-217; @Kruschke2014: 531-532]. A third approach [cf. @Kruschke2014: 294] takes advantage of the fact that 'tomorrow's prior is today's posterior' [@Lindley1972: 2] by specifying priors using results from previous posteriors. Such priors could be derived from previous research, or in a manner similar to *cross-validation* [cf. @Stone1974], by deriving the posterior from a relatively small subset of the current data (e.g., 10% - 20%), and then using this posterior as the prior for an analysis of the *remaining* data [for a discussion, see, e.g., @BergerAndPericchi2001]. However, in the event that researchers do possess prior information, they should *not* stray from using this information to specify 'strongly informative' priors [cf. @Kruschke2014: 113-115]. 
+
+Regardless of approach, researchers may be concerned whether their priors may inadvertently influence the results. As a response to this, it can be stated that for most statistical models, as long as the priors assigns non-zero probability to every possible parameter value, data can quickly overwhelm the prior [cf. @Kruschke2014: 293; @Wagenmakersetal2010: 167], producing relatively prior-insensitive results that closely resemble Frequentist and likelihood-based estimates, but for whom a Bayesian interpretation can be made. Similarly, should researchers specify priors using the (improper) uniform distribution, results approximate likelihood estimates [cf. @Hastieetal2017: 272] even with little data [cf. @Kruschke2014: 113]. Researchers can always compare results based on 'strong' or 'weakly informative' priors to results based on 'non-informative' priors, for example, results derived from the non-parametric bootstrap, to assess whether results are robust to the prior specification, though researchers should note that the re-sampling involved in the non-parametric bootstrap is *not* equivalent to the MCMC method of Bayesian inference [cf. @Kruschke2014: 161]. Regardless of approach to specifying priors, researchers should always transparently report their priors to open them up to criticism from their peers.
+
+In summary, the *Bayesian* KMO index (BKMO) is conceptualized as a 'measure of sampling adequacy given the (modeled) data'. Borrowing denotation from the Frequentist approach to distinguish this concept from the MLE-Bayesian approach, this *sampling adequacy given the (modeled) data* can be denoted $\alpha$, and alternatively $\alpha_{Bayes}$ if one wishes to distinguish it from its Frequentist and Likelihood-based conceptualizations. Since the Bayesian approach, similar to Frequentist or Likelihood-based procedures, involves *estimating* the sampling adequacy, the quantity that is expectedly produced from Bayesian inference with MCMC methods is the *estimated sampling adequacy given the (modeled) data* (i.e., $\hat{\alpha}$, or $\hat{\alpha}_{Bayes}$). This is a relevant distinction, since the two quantities (i.e., $a$ and $\hat{\alpha}$) may *not* necessarily be equivalent.
+
+By now, it should have been made clear that the BKMO index is *not* directly computed using MCMC methods, but instead are to be calculated from the posterior distribution of correlation matrices, which is why the likelihood and prior only needed to be specified for the correlations. This means that the BKMO index can be calculated, analogous to the bootstrapped Frequentist KMO index, simply by, for each posterior draw, constructing a correlation matrix from the estimated correlations, calculating the anti-image correlation matrix, followed by calculating the overall KMO index in line with the MLE-Bayesian formula 2.2.7.3 in function 2.2.7 mentioned in section \ref{sec:sec_kmo_formula}. This can be concisely expressed with the following formula:
+$$
+\text{BKMO}(\mathcal{D}) = \hat{\alpha}_d = \frac{\underset{i \neq j}{\sum \sum} r^2_{i,j,d}}{\underset{i \neq j}{\sum \sum} r^2_{i,j,d} + \underset{i \neq j}{\sum \sum} r_{q[i,j,d]}^2}
+\tag{3.1.2}
+$$
+where $d$ denotes the index for the $d$th posterior draw. Similarly, adapting the MLE-Bayesian formula 2.2.8.3 in function 2.2.8 using the same Bayesian re-conceptualization yields the following for estimating the posterior 'sampling adequacy' of manifestation $m$:
+$$
+\text{BKMO}(\mathcal{D}_m) = \hat{\alpha}_{m,d} = \frac{\sum_{j, j \neq i} r_{i,j,d}^2}{\sum_{j, j \neq i} r_{i,j,d}^2 +\sum_{j, j \neq i} r^2_{q[i,j,d]}}
+\tag{3.1.3}
+$$
+In accordance with this Bayesian conceptualization of the KMO index, from the distribution of its estimated posterior values, coherent probabilistic statements can be made about the sampling adequacy given the (modeled) data. For example, one can ascertain the posterior probability that the 'sampling adequacy' is greater than .5 (i.e., $P(\hat{\alpha} > .5 \:\ | \:\ \mathcal{D})$), or one can compute the 95% *highest density (contiguous) interval* [HD(C)I, @Kay2024a; @Kay2024b; @Kruschke2014: 28; @Makowskietal2019b; @McElreath2019: 56-58], which contains the 95% most probable values of the 'sampling adequacy', both of which are coherent probabilistic statements within the Bayesian framework [cf. @Clayton2021; @Kruschke2014]. Having thus re-conceptualized the KMO index within the Bayesian statistical framework and introduced it as the *Bayesian KMO index* (BKMO), a demonstration is provided.
+
+
+## Example {#sec:sec_bkmo_example}
+
+To demonstrate the conceptualized Bayesian KMO index, the simulated data matrix previously specified (see Section \ref{sec:sec_kmo_example}) is once again used. Contrary to the Frequentist approach, the manifestations are standardized using the MLE-Bayesian formula 2.3.1.1 for function 2.3.1 mentioned in section \ref{sec:sec_kmo_formula}, which is preferred to a 'proper' Bayesian standardization for computational ease, since the the estimation would otherwise have to account for a posterior of standardizations as input. Using the same notation introduced in section \ref{sec:sec_kmo_example}, based in part on Richard McElreath [-@McElreath2019: 441-442], a Bayesian Generalized Linear Model (BGLM) is formalized as:
+```{=latex}
+\begin{gather*}
+\tag{3.2.1}
+\theta_u | \mu_u, \Sigma \overset{iid}{\sim} \mathcal{MVN}(\mu_u, \Sigma) \; \text{for} \: u \: \text{in 1, } \dots \text{, } n \\
+\Sigma = \text{DRD} \\
+\mu_u = 0 \; \text{for all} \: u \\
+\text{diag(D)} = 1 \\
+\text{R} \sim \mathcal{LKJ}(2)
+\end{gather*}
+```
+Model 3.2.1 states that the individual manifestations (i.e., $\theta_u$) in the data matrix ($\mathcal{D}$) are *iid* as a conditionally *multivariate normal* distribution (i.e., $\mathcal{MVN}$) with a mean vector (i.e., $\mu_u$) and variance-covariance matrix (i.e., $\Sigma$) parameters. The variance-covariance matrix is a product of dispersion matrices, $\text{D}$, and a correlation matrix, $\text{R}$, and due to the standardization of each manifestation in $\mathcal{D}$, the mean vector ($\mu_u$) is invariably 0, while the diagonal of the dispersion matrices, $\text{diag(D)}$, is invariably 1 across all manifestations, which simplifies $\text{D}$ to an identity matrix. This reduces the variance-covariance matrix to the correlation matrix ($\text{R}$), whose correlations become the only estimands of the model for which priors will have to be specified. The prior distribution of $\text{R}$ is specified using the $\mathcal{LKJ}$ distribution [@Lewandowskietal2009], whose shape parameter (i.e., $\eta$), consistent with recommendations by McElreath [-@McElreath2019: 442], is specified as 2 to reflect an *a priori* belief in small correlations, which is intended to be 'regularizing/weakly informative' relative to the data [cf. @McElreath2019: 214-217, 442; see also @Gelmanetal2014: 55-56; @Gelmanetal2021: 123-127].
+
+To visualize the effective prior for the sampling adequacy that results from this prior for the correlation matrix, MCMC can be used to sample from the prior [cf. @Kruschke2014: 212]. The effective prior distribution of the sampling adequacy resulting from this $\mathcal{LKJ}$ prior has an average of `r bayesian_kmo_overall_prior`, with the entire distribution being shown in figure \@ref(fig:bkmo-overall-prior-posterior-plot). Inspecting this prior for the 'sampling adequacy' reveals an *a priori* belief in a relatively low 'sampling adequacy'. This can be substantively interpreted to reflect a conservative expectation that the data will be relatively infactorable due to a high diffusion in correlations and thus be *inappropriate* for factor analysis. As such, a shape parameter for the $\mathcal{LKJ}$ prior distribution of 2 for 10 theorized manifestations effectively implies a 'skeptical' prior for the 'sampling adequacy'. While the width of this distribution can be taken to indicate that it is also *a priori* 'persuadable', this property of the prior is ultimately determined in relation to the strength of the data, and as such, whether the prior is 'persuadable' will be assessed through comparisons with results derived from a 'non-informative' prior.
+
+Model 3.2.1 is then fit to the simulated data using the `brms` R package [@Buerkner2017; @Buerkner2018], which is useful due to its flexibility in model specification and reliance on the *STAN probabilistic programming language* [@Stan2024a] that enables efficient sampling from the posterior using the *No-U-Turn Sampler* [NUTS, @HoffmanAndGelman2014] for Hamiltonian MCMC [cf. @Kruschke2014: 400-416]. To help assess whether the sampler converged to the posterior distribution, `r chains` independent sampling chains were used, and to improve estimation reliability, `r warmup %>% qformat()` warm-up samples were drawn to increase the chances of convergence prior to sampling. After the warm-up period, `r iter %>% qformat()` samples were drawn from each chain, resulting in a total of `r posterior_samples %>% qformat()` posterior samples, whose size was chosen to help invoke the law of large numbers [@AngristAndPischke2015; @SenAndSinger1993; @StockAndWatson2019: 85-86], as well as ensure a sufficient *effective sample size* [i.e., ESS ≥ 10,000, @Buerkner2017; @Kassetal1998; @Kruschke2014: 182-184] after accounting for *autocorrelation* between the sampling chains [@Kruschke2014: 182]. Based on a visual inspections of *trace plots* [@Kruschke2014: 179-180] and adequate values of the *Gelman-Rubin convergence metric* [$\hat{R}$ < 1.01, cf. @Vehtarietal2021; see also @GelmanAndRubin1992] and *Monte Carlo Standard Error* [i.e., MCSE ≤ .001, cf. @Kruschke2014: 186-187], the sampling chains were assessed to have converged, suggesting that the posterior distribution had been reliably identified.
+
+```{r load_kmo_overall_prior_posterior_plot, include = FALSE}
+load("Plots/kmo_overall_prior_posterior_plot.rda")
+```
+
+```{r bkmo-overall-prior-posterior-plot, echo = FALSE, message = FALSE, fig.align = "left", fig.topcaption = TRUE, fig.height = 8, fig.cap = "Overall Sampling Adequacy"}
+kmo_overall_prior_posterior_plot
+```
+\vspace{-4em}
+\begingroup
+\noindent
+\fontsize{8pt}{10pt}\selectfont
+\linespread{1}\selectfont
+**NOTE**: Prior/Posterior distributions of the estimated overall Bayesian KMO index (i.e., $\hat{\alpha}$). Prior/Posterior samples = `r nrow(bayesian_kmo) %>% qformat()`. The geometrics below the distributions indicate the mode (circle) and the 95% HDCI (bar). Results derived from simulated data.
+\endgroup
+\vspace{1em}
+
+Having estimated the posterior distribution of the correlation matrix, the BKMO index can then be calculated using the formula outlined in section \ref{sec:sec_kmo_formula}, by constructing a correlation matrix from the estimated correlation coefficients, which in line with the above Bayesian conceptualization of the BKMO as the estimated the sampling adequacy given the (modeled) data (i.e., $\hat{\alpha}$),  will be denoted $\hat{P}$ (alternatively $\hat{P}_{Bayes}$). This is followed by calculating the anti-image correlation matrix (denoted $\hat{P_q}$, or $\hat{P}_{q[Bayes]}$) using the inverse correlation matrix (i.e., $\hat{P}^{-1}$, or $\hat{P}^{-1}_{Bayes}$) using the framework-appropriate formula 2.2.6.3 for function 2.2.6. From these matrices, the overall and individual BKMO indices are calculated using the similarly appropriate formula 2.2.7.3 and 2.2.8.3 for functions 2.2.7 and 2.2.8, respectively. The reliance on these MLE-Bayesian point-estimating formula is appropriate, because the prior information has already been incorporated into a posterior correlation matrix from which a posterior sampling adequacy can be computed simply by applying point estimators to each draw. Since the posterior distribution consists of `r posterior_samples %>% qformat()` samples, these steps had to be iterated for each sample to produce an estimated posterior distribution of the BKMO index, which is why the functions implementing the calculation of the BKMO relied on *vectorization* to speed up computation [cf. @Kruschke2014: 408]. These functions were implemented using R code and are provided for ease of implementation in section \ref{sec:sec_bkmo_function_appendix} of the Appendix.
+
+The estimated posterior distribution of the BKMO index, that is, the estimated sampling adequacy given the (modeled) data ($\hat{\alpha}$) is provided visually next to the prior distribution in figure \@ref(fig:bkmo-overall-prior-posterior-plot). These results can be summarized metrically, with the posterior average of the overall KMO index being `r bayesian_kmo$overall %>% mean() %>% round_down(digits = digits$text)`, with a posterior standard deviation^[Consistent with the MLE-Bayesian approach, the standard deviation of the posterior is calculated using formula 2.2.3.3 for function 2.2.3 (see Section \ref{sec:sec_kmo_formula}).] (SD) of `r bayesian_kmo$overall %>% sd2() %>% round_up(digits = digits$text)`. The 95% HDI reveals that the sampling adequacy were with 95% credibility between `r (bayesian_kmo$overall %>% bayestestR::hdi())$CI_low %>% round_down(digits = digits$text)` and `r (bayesian_kmo$overall %>% bayestestR::hdi())$CI_high %>% round_down(digits = digits$text)`. Comparing the posterior to the prior distribution reveals an overlap of `r (bayestestR::overlap(bayesian_kmo_priors$overall, bayesian_kmo$overall)[1]*100) %>% round_up(digits = digits$text)`% and an average difference of `r mean(bayesian_kmo$overall-bayesian_kmo_priors$overall) %>% round_up(digits = digits$text)` (SD = `r sd2(bayesian_kmo$overall-bayesian_kmo_priors$overall) %>% round_up(digits = digits$text)`; 95% HDI[`r bayestestR::hdi(bayesian_kmo$overall-bayesian_kmo_priors$overall)$CI_low %>% round_down(digits = digits$text)`; `r bayestestR::hdi(bayesian_kmo$overall-bayesian_kmo_priors$overall)$CI_high %>% round_up(digits = digits$text)`], revealing that the two distributions are credibly different. The fact that the credible values of the sampling adequacy have crossed the threshold of .5 and become credibly higher than this value, reflected in the lack of overlap between .5 and the 95% HDI, is consistent with a discernible and credibly high 'sampling adequacy'. This means that the diffusion in the correlations are relatively low with a high degree of credibility, and the data matrix could thus be considered factorable and appropriate for a subsequent factor analysis.
+
+To demonstrate how researchers can assess the robustness of results in relation to their choice of priors, the posterior derived from strongly or weakly informative priors can be compared to posteriors derived using 'non-informative' priors. This is done here by respecifying model 3.2.1 so that the $\mathcal{LKJ}$ prior has a shape parameter of 1, which essentially reflects a uniform Beta prior on the correlations of the correlation matrix, and refitting it using the same MCMC software yields similarly reliable model diagnostics that are *not* reported here. Since the priors of this model are 'non-informative', this model approximates a maximum-likelihood model, and the resulting 'likelihood' distribution is illustrated in figure \@ref(fig:bkmo-overall-comparison-plot), where the average value is `r mean(bayesian_kmo_likelihood$overall) %>% round_down(digits = digits$text)` (SD = `r sd2(bayesian_kmo_likelihood$overall) %>% round_down(digits = digits$text)`; 95% HDI[`r bayestestR::hdi(bayesian_kmo_likelihood$overall)$CI_low %>% round_down(digits = digits$text)`; `r bayestestR::hdi(bayesian_kmo_likelihood$overall)$CI_high %>% round_up(digits = digits$text)`]). The overlap between this 'likelihood' distribution and the posterior is approximately `r (bayestestR::overlap(bayesian_kmo$overall, bayesian_kmo_likelihood$overall)[1]*100) %>% scrutiny::round_down(digits = 1)`%, with an average difference of `r mean(bayesian_kmo$overall-bayesian_kmo_likelihood$overall) %>% round_down(digits = digits$text)` (SD = `r sd2(bayesian_kmo$overall-bayesian_kmo_likelihood$overall) %>% round_down(digits = digits$text)`; 95% HDI[`r bayestestR::hdi(bayesian_kmo$overall-bayesian_kmo_likelihood$overall)$CI_low %>% round_down(digits = digits$text)`; `r bayestestR::hdi(bayesian_kmo$overall-bayesian_kmo_likelihood$overall)$CI_high %>% round_up(digits = digits$text)`]), revealing them to be credibly *indifferent*. This corroborates the claim that the prior specified in model is 'weakly informative' and showcases that the BKMO can approximate likelihood-based results with enough data.
+
+While a Bayesian model with 'non-informative' priors can often be fitted using MCMC methods, sometimes for complex models, it can be difficult to get the model to reliably converge. As such, an alternative method to assess the robustness of results to the specification of priors, a model with 'non-informative' priors can be estimated using the non-parametric bootstrap, which similarly approximates MCMC with 'non-informative' priors. This model was fit previously when discussing the inferential viability of the Frequentist KMO index in section \ref{sec:sec_kmo_inference}, and the resulting (non-parametric) bootstrap distribution is also provided in figure \@ref(fig:bkmo-overall-comparison-plot). The results of this model are not repeated here, but the overlap between this bootstrap distribution and the posterior is approximately `r (bayestestR::overlap(bayesian_kmo$overall, bootstrapped_kmo$kmo_overall)[1]*100) %>% scrutiny::round_down(digits = 1)`%, with an average difference of `r mean(bayesian_kmo$overall-bootstrapped_kmo$kmo_overall) %>% round_down(digits = digits$text)` (SD = `r sd2(bayesian_kmo$overall-bootstrapped_kmo$kmo_overall) %>% round_down(digits = digits$text)`; 95% HDI[`r bayestestR::hdi(bayesian_kmo$overall-bootstrapped_kmo$kmo_overall)$CI_low %>% round_down(digits = digits$text)`; `r bayestestR::hdi(bayesian_kmo$overall-bootstrapped_kmo$kmo_overall)$CI_high %>% round_up(digits = digits$text)`]). This relatively high degree of overlap, and the lack of a credible difference, again corroborates the claim that the prior in model 3.2.1 is 'weakly informative' and showcases that the BKMO can approximate a bootstrapped Frequentist KMO index.
+
+```{r load_bkmo_overall_comparison_plot, include = FALSE}
+load("Plots/bkmo_overall_comparison_plot.rda")
+```
+
+```{r bkmo-overall-comparison-plot, echo = FALSE, message = FALSE, fig.align = "left", fig.topcaption = TRUE, fig.height = 8, fig.cap = "Overall Sampling Adequacy"}
+bkmo_overall_comparison_plot
+```
+\vspace{-4em}
+\begingroup
+\noindent
+\fontsize{8pt}{10pt}\selectfont
+\linespread{1}\selectfont
+**NOTE**: Likelihood, Posterior, and (Non-parametric) bootstrap distributions of the estimated overall KMO index (i.e., $\hat{\alpha}$). Likelihood/Posterior/Bootstrap samples/permutations = `r nrow(bayesian_kmo) %>% qformat()`. The geometrics below the distributions indicate the mode (circle) and the 95% HDCI (bar). Results derived from simulated data.
+\endgroup
+\vspace{1em}
+
+In summary, the similarities in results across the Bayesian, likelihood-based, and bootstrapped Frequentist approaches reflect the aforementioned properties of Bayesian inference, where 'weakly informative' priors can be quickly overwhelmed by data, resulting in the convergence of results. As such, results from Bayesian inference often approximate Frequentist/Likelihood-based results, though it is clear that solely Bayesian inference enables the incorporation of prior information and coherent probabilistic statements from the posterior.
+
+
+# Discussion {#sec:sec_discussion}
+
+This paper has introduced the Bayesian KMO index. This was accomplished by reviewing the classical Kaiser-Meyer-Olkin (KMO) index, which is a Measure of Sampling Adequacy (MSA) that helps assess whether a data matrix is appropriate for a factor analysis. To build towards a Bayesian KMO index (Section \ref{sec:sec_kmo}), this review revisited its calculation and discussed its mathematical and conceptual properties, which served to show that the KMO index is a Frequentist statistic, whose robustness and inferential viability rely on strict assumptions about the data matrix. Bayes' theorem was then used to re-conceptualize the KMO index (Section \ref{sec:sec_bkmo}), resulting in a Bayesian KMO (BKMO) index that can incorporate prior information and enable coherent probabilistic statement about the sampling adequacy given the (modeled) data. Estimated with MCMC methods, its ease of computation was demonstrated, and this paper provides code to implement it in R (Section \ref{sec:sec_bkmo_function_appendix}).
+
+The conceptualization of a Bayesian KMO index constitutes a novel contribution to the literature on statistical inference, in particular, the subdiscipline of factor analysis [e.g., @DziubanAndShirkey1974; @Kaiser1970], since it enables researchers to incorporate prior information when assessing the 'sampling adequacy' of a data matrix, and from the resulting posterior distributions, coherent probabilistic statements about sampling adequacy can be made. To remain consistent within their statistical framework, Bayesian researchers should ideally substitute the Frequentist KMO index for its Bayesian counterpart whenever they are interested in assessing the 'sampling adequacy' prior to a factor analysis. The areas of application for the BKMO index are numerous, especially within the *psychometrics* subdiscipline of psychology [e.g., @Brown2015; @LevyAndMislevy2020], where it can provide critical information to researchers developing new measurement scales for latent phenomenon. Though *not* explicitly covered here, like its Frequentist counterpart, the Bayesian KMO index can be made more robust by rank-standardizing the data matrix. Similarly, the usage of the BKMO is *not* restricted to exploratory factor analyses but can in principle be used in relation to a *Bayesian confirmatory factor analysis* [BCFA, @LevyAndMislevy2020: 187-230], where researchers can prespecify and test hypotheses about the sampling adequacy.
+
+
+# Declarations {#sec:sec_declarations}
+
+## Author Contributions
+- Emil Niclas Meyer-Hansen independently conceived, conceptualized, and implemented the Bayesian version of the *Keiser-Meyer-Olkin* (KMO) index, simulated the data, conducted the analyses, and wrote this manuscript.
+
+
+## Funding
+- Emil Niclas Meyer-Hansen received no funding to assist with this project.
+
+
+## Conflicts of Interest
+- Emil Niclas Meyer-Hansen has no competing interests to declare that are relevant to the content of this project.
+
+
+## Availability of Data, Code & Materials
+- Data, code, and materials are made freely available on the OSF page of this study (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)). 
+
+
+## Acknowledgements
+
+- This study was made possible by building on insights and contributions from numerous researchers across disciplines, in particular Henry F. Kaiser and John Rice. The author is similarly indebted to the STAN Development Team and Paul-Christian Bürkner, whose contributions to Bayesian inference is fundamental to the Bayesian KMO as conceptualized and implemented here.
+
+
+# Literature {#sec:sec_literature}
+
+<div id="refs"></div>
+
+\newpage
+
+# Appendix {#sec:sec_appendix}
+
+This appendix contains the changelog (Section \ref{sec:sec_changelog_appendix}); software specifications (Section \ref{sec:sec_software_appendix}); R function implementing the Bayesian Kaiser-Meyer-Olkin (BKMO) index (Section \ref{sec:sec_bkmo_function_appendix}); the formula and R function implementations of the different versions of the KMO index, more formally denoted Measures of Sampling Adequacy (MSA) (Section \ref{sec:sec_msa_appendix}); the results from the Monte Carlo simulations assessing the characteristics of the KMO index discussed in \ref{sec:sec_kmo_interpretation} (Section \ref{sec:sec_monte_carlo_appendix}); a matrix containing the correlations, unique correlations, and KMO indices of the simulated data used in section \ref{sec:sec_kmo_example} (Section \ref{sec:sec_simulated_correlation_matrix_appendix}); and information on citation (Section \ref{sec:sec_citation_appendix}).
+
+## Changelog {#sec:sec_changelog_appendix}
+
+- **`r format(Sys.time(), "%Y-%m-%d %H:%M %Z")`**
+  - [Version `r format(Sys.time(), "%Y-%m-%d-%H-%M")`] - Working Paper (Minor Corrections).
+
+- **2025-05-20 10:29 CEST**
+  - [Version 2025-05-20-10-29] - Working Paper (Initial Release).
+
+
+## Software Specifications {#sec:sec_software_appendix}
+
+This document was created on a `r sessionInfo()$running` operating system (OS) on the `r format(Sys.time(), "%Y-%m-%d %H:%M %Z")` (Timezone: `r sessionInfo()$tzone`). The machine has `r parallel::detectCores()` cores available, and the range of doubles is
+```{r, echo = FALSE, results = "asis"}
+paste0(
+  "$",
+  .Machine$double.xmin %>% format(scientific = TRUE, digits = digits$table) %>% str_replace_all("e", "\\\\cdot10^{"),
+  "}$"
+) %>% cat()
+```
+ - 
+```{r, echo = FALSE, results = "asis"}
+paste0(
+  "$",
+  .Machine$double.xmax %>% format(scientific = TRUE, digits = digits$table) %>% str_replace_all("e", "\\\\cdot10^{"),
+  "}$."
+) %>% cat()
+```
+
+```{r r_version, include = FALSE}
+r_version <- sessionInfo()$R.version$version.string
+r_version <- stringr::str_replace(r_version, "R version ", "v")
+r_version <- stringr::str_replace(r_version, "\\(", "\\[")
+r_version <- stringr::str_replace(r_version, "\\)", "\\]")
+
+rstudio_version <- paste0('v', rstudioapi::versionInfo()$version)
+```
+
+All code is written using the R programming language [`r r_version`, @RCoreTeam2025], while the document is written with *markdown* [@Gruber2014] and *LaTeX* [@Lamport1986; @LaTeXProject2025] in the RStudio IDE [`r rstudioapi::versionInfo()$version`, @PositTeam2025], using the R packages `bayesplot` [v`r packageVersion("bayesplot")`, @Gabryetal2019], `bayestestR` [v`r packageVersion("bayestestR")`, @Makowskietal2019b], `bookdown` [v`r packageVersion("bookdown")`, @Xie2016; @Xie2025], `brms` [v`r packageVersion("brms")`, @Buerkner2017; @Buerkner2018], `datawizard` [v`r packageVersion("datawizard")`, @Patiletal2022], `doParallel` [v`r packageVersion("doParallel")`, @MicrosoftAndWeston2022a], `dplyr` [v`r packageVersion("dplyr")`, @Wickhametal2023], `effectsize` [v`r packageVersion("effectsize")`, @Benshacharetal2020], `forcats` [v`r packageVersion("forcats")`, @Wickham2023a], `foreach` [v`r packageVersion("foreach")`, @MicrosoftAndWeston2022b], `ggplot2` [v`r packageVersion("ggplot2")`, @Wickham2016], `Hmisc` [v`r packageVersion("Hmisc")`, @Harrell2025], `iterators` [v`r packageVersion("iterators")`, @RevolutionAndWeston2022], `kableExtra` [v`r packageVersion("kableExtra")`, @Zhu2024], `knitr` [v`r packageVersion("knitr")`, @Xie2014; @Xie2015; @Xie2024], `latex2exp` [v`r packageVersion("latex2exp")`, @Meschiari2022], `lubridate` [v`r packageVersion("lubridate")`, @GrolemundAndWickham2011], `pacman` [v`r packageVersion("pacman")`, @RinkerAndKurkiewicz2018], `parallel` [v`r packageVersion("parallel")`, @RCoreTeam2025], `performance` [v`r packageVersion("performance")`, @Luedeckeetal2021], `Polychrome` [v`r packageVersion("Polychrome")`, @Coombesetal2019], `psych` [v`r packageVersion("psych")`, @Revelle2025], `purrr` [v`r packageVersion("purrr")`, @WickhamAndHenry2025], `pwr` [v`r packageVersion("pwr")`, @Champely2020], `Rcpp` [v`r packageVersion("Rcpp")`, @Eddelbuettel2013; @Eddelbuetteletal2025; @EddelbuettelAndFrancois2011; @EddelbuettelAndBalamuta2018], `readr` [v`r packageVersion("readr")`, @Wickhametal2024a], `rmarkdown` [v`r packageVersion("rmarkdown")`, @Allaireetal2024; @Xieetal2018; @Xieetal2020], `rQCC` [v`r packageVersion("rQCC")`, @Parketal2022; @ParkAndWang2020; @ParkAndWang2022], `rstan` [v`r packageVersion("rstan")`, @Stan2024b], `rstudioapi` [v`r packageVersion("rstudioapi")`, @Usheyetal2024], `scrutiny` [v`r packageVersion("scrutiny")`, @Jung2024], `StanHeaders` [v`r packageVersion("StanHeaders")`, @Stan2020], `stringr` [v`r packageVersion("stringr")`, @Wickham2023b], `tibble` [v`r packageVersion("tibble")`, @MullerAndWickham2023], `tidybayes` [v`r packageVersion("tidybayes")`, @Kay2024c], `tidyr` [v`r packageVersion("tidyr")`, @Wickhametal2024b], `tidyverse` [v`r packageVersion("tidyverse")`, @Wickhametal2019], `trialr` [v`r packageVersion("trialr")`, @Brock2023], and `weights` [v`r packageVersion("weights")`, @Paseketal2021]. The seed used for generating random numbers (e.g., for MCMC) was exogenously predetermined using the  `random` R package [v`r packageVersion("random")`, @Eddelbuettel2017].
+
+
+## Function {#sec:sec_bkmo_function_appendix}
+
+A simple implementation of the *Bayesian Keiser-Meyer-Olkin* (BKMO) index in R [`r r_version`, @RCoreTeam2025] that computes the posterior sampling adequacy from the posterior correlation matrix using the `brms` R package [v`r packageVersion("brms")`, @Buerkner2017; @Buerkner2018] is provided in the code below:
+```{r BKMO_function, include = TRUE, echo = TRUE, eval = FALSE}
+
+# Compute Bayesian KMO index from a Bayesian multivariate linear model
+#
+# @param r Posterior draws of the (residual) correlations from a Bayesian multivariate
+# linear model.
+# @return A matrix of Bayesian KMO indices, where rows are posterior draws (with the
+# number of rows equal to the number of posterior draws) and columns are the
+# individual BKMO indices and one overall BKMO index (with the number of columns equal
+# to the number of theorized manifestations plus one).
+
+BKMO <- function(r = NULL){
+  if(!is.matrix(r)) r <- as.matrix(r)
+  
+  # Compute p (i.e., number of theorized manifestations)
+  disc <- sqrt(1 + 8 * ncol(r))
+  p <- (1 + disc) / 2
+  
+  # Define utility function for vectorization
+  utility_KMO <- function(r = r, p = p){
+    # Construct correlation matrix 
+    R <- diag(1, p)
+    R[upper.tri(R)] <- r
+    R[lower.tri(R)] <- t(R)[lower.tri(R)]
+    row.names(R) <- paste0('m', 1:p)
+    colnames(R) <- paste0('m', 1:p)
+    
+    # Compute inverse R
+    R_inv <- solve(R)
+    
+    # Compute anti-image R
+    R_q <- -R_inv / sqrt(outer(diag(R_inv), diag(R_inv)))
+    
+    # Compute KMO
+    diag(R_q) <- 0
+    r2 <- R^2
+    q2 <- R_q^2
+    diag(r2) <- 0
+    diag(q2) <- 0
+    kmo <- c(
+      rowSums(r2) / (rowSums(r2) + rowSums(q2)),
+      overall = sum(r2) / (sum(r2) + sum(q2))
+    )
+    return(kmo)
+  }
+  
+  # Compute KMO for each posterior draw using vectorization
+  bkmo <- do.call(rbind, lapply(1:nrow(r), function(i) utility_KMO(
+        r = r[i, , drop = FALSE], p = p
+      )
+    )
+  )
+  return(as.data.frame(bkmo))
+}
+```
+```{r BKMO_example, include = TRUE, echo = TRUE, eval = FALSE}
+## Example
+
+# Simulate data
+library("tidyverse")
+sample_size <- 1000
+n_manifestations <- 10
+sesoi <- .3
+loadings <- runif(n_manifestations, sesoi, .7)
+df <- data.frame(
+  latent = rnorm(sample_size)
+)
+for(i in 1:n_manifestations){
+  df[,paste0("m", i)] <- loadings[i]*df$latent + rnorm(sample_size)
+}
+df <- df %>% select(-latent)
+
+# Define maximum-likelihood functions
+sd2 <- function(x = NULL, na.rm = FALSE){
+  stopifnot(is.numeric(x))
+  stopifnot(is.logical(na.rm))
+
+  x_mean <- mean(x, na.rm = na.rm)
+  x_var <- mean((x - x_mean)^2, na.rm = na.rm)
+  x_sd <- sqrt(x_var)
+  return(x_sd)
+}
+standardize2 <- function(x = NULL, na.rm = FALSE){
+  stopifnot(is.numeric(x))
+  stopifnot(is.logical(na.rm))
+  
+  x_mean <- mean(x, na.rm = na.rm)
+  x_var <- mean((x - x_mean)^2, na.rm = na.rm)
+  x_sd <- sqrt(x_var)
+
+  x_standardized <- (x - x_mean) / x_sd
+  return(x_standardized)
+}
+
+# Standardize data matrix
+df <- apply(df, 2, standardize2) %>% as.data.frame()
+
+# Specify MCMC
+library("parallel")
+posterior_samples <- 4000
+chains <- cores <- parallel::detectCores()-1
+warmup <- 1000
+iter <- ceiling((posterior_samples / chains) + warmup)
+posterior_samples <- (iter - warmup)*chains
+
+# Specify Bayesian Generalized Linear Model (BGLM)
+library("brms")
+bglm_model <- brms::bf(
+  mvbind(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10) ~ 0,
+  sigma ~ 0,
+  family = gaussian(
+    link = "identity"
+  )
+) + set_rescor(TRUE)
+
+# Specify 'weakly-informative' model priors
+bglm_priors <- brms::get_prior(bglm_model, data = df)
+bglm_priors[1,] <- brms::set_prior(
+  "lkj(2)",
+  class = "rescor"
+)
+
+# Fit Bayesian multivariate linear model with brms
+bglm_fit <- brms::brm(
+  formula = bglm_model,
+  family = gaussian(
+    link = "identity"
+  ),
+  prior = bglm_priors,
+  data = df, 
+  chains = chains,
+  cores = cores,
+  iter = iter,
+  warmup = warmup
+)
+
+# Extract posterior draws of the (residual) correlations from the fitted Bayesian model
+library("stringr")
+bglm_samples <- brms::as_draws_df(bglm_fit)
+bglm_correlations <- bglm_samples[, stringr::str_detect(colnames(bglm_samples), "rescor__")]
+
+# Compute Bayesian KMO index
+library("bayestestR")
+kmo_bayes <- BKMO(r = bglm_correlations)
+hist(kmo_bayes$overall)
+print(
+  paste0(
+    "Mean = ", mean(kmo_bayes$overall) %>% round(digits = 3),
+    " (SD = ", sd2(kmo_bayes$overall)  %>% round(digits = 3),
+    "; 95% HDI[",
+    bayestestR::hdi(kmo_bayes$overall)$CI_low  %>% round(digits = 3), "; ",
+    bayestestR::hdi(kmo_bayes$overall)$CI_high  %>% round(digits = 3), "])"
+  )
+)
+```
+Generalizing the code for more sophisticated scenarios is trivial but beyond the scope of this paper. Researchers interested in robust versions of the BKMO can simply rank-standardize their variables before computing the posterior correlation matrix.
+
+
+## Measures of Sampling Adequacy {#sec:sec_msa_appendix}
+
+The formula underlying the *Kaiser-Meyer-Olkin* (KMO) indices discussed in section \ref{sec:sec_kmo_interpretation}, more formally denoted *Measures of Sampling Adequacy* (MSA), are provided here. These formula are based on the notation established in this paper, using the Frequentist conceptualizations (see Section \ref{sec:sec_kmo_formula}). This section also includes code implementing each of these MSAs as functions in R. Section \ref{sec:sec_msa_kaiser1970_appendix} covers the 'Mark II' version [i.e., @Kaiser1970], section \ref{sec:sec_msa_kaiserandrice1974_appendix} covers 'Mark IV' [i.e., @KaiserAndRice1974], and section \ref{sec:sec_msa_kaiser1981_appendix} covers 'Mark V' [i.e., @Kaiser1981].
+
+
+### @Kaiser1970 {#sec:sec_msa_kaiser1970_appendix}
+
+The initial MSA (i.e., $\text{MSA}_1$), also known as 'second generation Little Jiffy', proposed by @Kaiser1970. The formula for calculating the overall MSA is provided in equation 7.4.1.1:
+$$
+\text{MSA}_1 = 1 - \frac{\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{q[i,j]}}{\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{i,j}} \tag{7.4.1.1}
+$$
+where $\Sigma \Sigma$ denotes the row-wise summation operator, $\hat{\rho}_{q}$ denotes the anti-image correlation coefficient, and $\hat{\rho}$ denotes the Pearson product-moment correlation coefficient. The formula for calculating indvidual MSAs are provided in equation 7.4.1.2:
+$$
+\text{MSA}_1(i) = 1 - \frac{
+\sum_{j, j \neq i} \hat{\rho}^2_{q[i,j]}
+}{
+\sum_{j, j \neq i} \hat{\rho}^2_{i,j}
+}  \tag{7.4.1.2}
+$$
+where $\Sigma$ denotes the summation operator, $\hat{\rho}_{q}$ denotes the anti-image correlation coefficient, and $\hat{\rho}$ denotes the Pearson product-moment correlation coefficient. Implementing $\text{MSA}_1$ as a function in R can be done with:
+```{r, eval = FALSE, echo = TRUE}
+# MSA #1 ('Mark II', Kaiser, 1970)
+msa1 <- function(R = NULL){
+  if (!is.matrix(R)) stop("Input must be a matrix.")
+  if (!all(R == t(R))) stop("Matrix must be symmetric.")
+  inv_R <- solve(R)
+  P <- -inv_R / sqrt(outer(diag(inv_R), diag(inv_R)))
+  r2 <- R^2
+  p2 <- P^2
+  diag(r2) <- 0
+  diag(p2) <- 0
+  kmo_i <- 1 - (rowSums(p2) / rowSums(r2))
+  kmo_overall <- 1 - (sum(p2) / sum(r2))
+  return(list(overall = kmo_overall, individual = kmo_i))
+}
+```
+
+
+
+### @KaiserAndRice1974 {#sec:sec_msa_kaiserandrice1974_appendix}
+
+The 'second' MSA (i.e., $\text{MSA}_2$), also known as 'Little Jiffy, Mark IV', by @KaiserAndRice1974. The formula for calculating the overall MSA is provided in equation 7.4.2.1:
+$$
+\text{MSA}_2 = \frac{
+\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{i,j}
+}{
+\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{i,j} + 
+\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{q[i,j]}
+} \tag{7.4.2.1}
+$$
+where $\Sigma \Sigma$ denotes the row-wise summation operator, $\hat{\rho}_{q}$ denotes the anti-image correlation coefficient, and $\hat{\rho}$ denotes the Pearson product-moment correlation coefficient. The formula for calculating indvidual MSAs are provided in equation 7.4.2.2:
+$$
+\text{MSA}_2(i) = \frac{
+\sum_{j, j \neq i} \hat{\rho}^2_{i,j}
+}{
+\sum_{j, j \neq i} \hat{\rho}^2_{i,j} +
+\sum_{j, j \neq i} \hat{\rho}^2_{q[i,j]}
+}  \tag{7.4.2.2}
+$$
+where $\Sigma$ denotes the summation operator, $\hat{\rho}_{q}$ denotes the anti-image correlation coefficient, and $\hat{\rho}$ denotes the Pearson product-moment correlation coefficient. A function implementing $\text{MSA}_2$ in R is provided below:
+```{r, eval = FALSE, echo = TRUE}
+# MSA #2 ('Mark IV', Kaiser & Rice, 1974)
+msa2 <- function(R = NULL){
+  if (!is.matrix(R)) stop("Input must be a matrix.")
+  if (!all(R == t(R))) stop("Matrix must be symmetric.")
+  inv_R <- solve(R)
+  P <- -inv_R / sqrt(outer(diag(inv_R), diag(inv_R)))
+  r2 <- R^2
+  p2 <- P^2
+  diag(r2) <- 0
+  diag(p2) <- 0
+  kmo_i <- rowSums(r2) / (rowSums(r2) + rowSums(p2))
+  kmo_overall <- sum(r2) / (sum(r2) + sum(p2))
+  return(list(overall = kmo_overall, individual = kmo_i))
+}
+```
+
+
+
+### @Kaiser1981 {#sec:sec_msa_kaiser1981_appendix}
+
+The 'third' MSA (i.e., $\text{MSA}_3$) proposed by @Kaiser1981, which can also be considered 'Mark V' of 'Little Jiffy'. The formula for calculating the overall MSA is provided in equation 7.4.3.1:
+$$
+\text{MSA}_3 = \sqrt{ 1 - \frac{\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{q[i,j]}}{\underset{i \neq j}{\sum \sum} \hat{\rho}^2_{i,j}}} \tag{7.4.3.1}
+$$
+where $\Sigma \Sigma$ denotes the row-wise summation operator, the *radical* (i.e., $\sqrt{}$) denotes the *square-root operation*, $\hat{\rho}_{q}$ denotes the anti-image correlation coefficient, and $\hat{\rho}$ denotes the Pearson product-moment correlation coefficient. The formula for calculating indvidual MSAs are provided in equation 7.4.3.2:
+$$
+\text{MSA}_3(i) = \sqrt{ 1 - \frac{
+\sum_{j, j \neq i} \hat{\rho}^2_{q[i,j]}
+}{
+\sum_{j, j \neq i} \hat{\rho}^2_{i,j}
+}}  \tag{7.4.3.2}
+$$
+where $\Sigma$ denotes the summation operator, the *radical* (i.e., $\sqrt{}$) denotes the *square-root operation*, $\hat{\rho}_{q}$ denotes the anti-image correlation coefficient, and $\hat{\rho}$ denotes the Pearson product-moment correlation coefficient. A function implementing both equations related to $\text{MSA}_3$ is provided below:
+```{r, eval = FALSE, echo = TRUE}
+# MSA #3 ('Mark V', Kaiser, 1981)
+msa3 <- function(R = NULL){
+  if (!is.matrix(R)) stop("Input must be a matrix.")
+  if (!all(R == t(R))) stop("Matrix must be symmetric.")
+  inv_R <- solve(R)
+  P <- -inv_R / sqrt(outer(diag(inv_R), diag(inv_R)))
+  r2 <- R^2
+  p2 <- P^2
+  diag(r2) <- 0
+  diag(p2) <- 0
+  kmo_i <- sqrt(1 - (rowSums(p2) / rowSums(r2)))
+  kmo_overall <- sqrt(1 - (sum(p2) / sum(r2)))
+  return(list(overall = kmo_overall, individual = kmo_i))
+}
+```
+
+
+## Characteristics of the KMO index {#sec:sec_monte_carlo_appendix}
+
+The results from the Monte Carlo simulation study of the characteristics of the KMO index discussed in section \ref{sec:sec_kmo_interpretation} are provided here. Results from the first set of simulations investigating the relationship between the correlations of the correlation matrix and the anti-image correlations of the anti-image correlation matrix are illustrated in figure \@ref(fig:cor-parcor-association-results-plot) in section \ref{sec:sec_mcmc_correlation_common_unique_appendix}. Results from the second set of simulations used to gauge the relationship between the KMO index and independent correlations of a correlation matrix are shown in figure \@ref(fig:kmo-independence-results-plot) in section \ref{sec:sec_mcmc_correlation_independent_appendix}. Results from the third and last set of simulations that sought to assess the relationship between the KMO index and codependent correlations of a correlation matrix are shown in figure \@ref(fig:kmo-codependence-results-plot) in section \ref{sec:sec_simulated_correlation_matrix_appendix}.
+
+\newpage
+
+```{r kmo_characteristics, include = FALSE, eval = FALSE}
+# Independent Inter-Correlations ---------------------------------------
+
+# 3 variables
+k <- 3
+kmo_independence_3_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, -1, 1)
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      kmo_i <- psych::KMO(correlation_matrix_i)
+    },
+    error = function(e) kmo_i <- list(overall = NA, individual = rep(NA, k))
+  )
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output <- data.frame(r = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)]), overall = kmo_i$MSA)
+  output <- cbind(output, kmos_i)
+  colnames(output) <- c("r", "overall", paste0("m", 1:k))
+  return(output)
+}
+
+# 5 variables
+k <- 5
+kmo_independence_5_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, -1, 1)
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      kmo_i <- psych::KMO(correlation_matrix_i)
+    },
+    error = function(e) kmo_i <- list(overall = NA, individual = rep(NA, k))
+  )
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output <- data.frame(r = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)]), overall = kmo_i$MSA)
+  output <- cbind(output, kmos_i)
+  colnames(output) <- c("r", "overall", paste0("m", 1:k))
+  return(output)
+}
+
+# 10 variables
+k <- 10
+kmo_independence_10_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, -1, 1)
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      kmo_i <- psych::KMO(correlation_matrix_i)
+    },
+    error = function(e) kmo_i <- list(overall = NA, individual = rep(NA, k))
+  )
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output <- data.frame(r = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)]), overall = kmo_i$MSA)
+  output <- cbind(output, kmos_i)
+  colnames(output) <- c("r", "overall", paste0("m", 1:k))
+  return(output)
+}
+
+# 20 variables
+k <- 20
+kmo_independence_20_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, -1, 1)
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      kmo_i <- psych::KMO(correlation_matrix_i)
+    },
+    error = function(e) kmo_i <- list(overall = NA, individual = rep(NA, k))
+  )
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output <- data.frame(r = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)]), overall = kmo_i$MSA)
+  output <- cbind(output, kmos_i)
+  colnames(output) <- c("r", "overall", paste0("m", 1:k))
+  return(output)
+}
+kmo_independence_results_plot <- ggpubr::ggarrange(
+  kmo_independence_3_variables_results %>% ggplot(aes(x = r, y = overall)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(0, 1, .1), limits = c(0, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Overall KMO index",
+      title = "k = 3"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  kmo_independence_5_variables_results %>% ggplot(aes(x = r, y = overall)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(0, 1, .1), limits = c(0, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Overall KMO index",
+      title = "k = 5"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  kmo_independence_10_variables_results %>% ggplot(aes(x = r, y = overall)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(0, 1, .1), limits = c(0, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Overall KMO index",
+      title = "k = 10"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  kmo_independence_20_variables_results %>% ggplot(aes(x = r, y = overall)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(0, 1, .1), limits = c(0, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Overall KMO index",
+      title = "k = 20"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  ncol = 2,
+  nrow = 2,
+  align = "v"
+)
+save(kmo_independence_results_plot, file = "Plots/kmo_independence_results_plot.rda", version = 2)
+
+
+# Co-Dependent Inter-Correlations ---------------------------------------
+
+# Inter-correlations from perfectly negative to perfectly positive
+r_values <- seq(-1, 1, length.out = posterior_samples)
+
+# 3 variables
+k <- 3
+kmo_codependence_3_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  if(i != 1){
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, r_values[i-1], r_values[i])
+  }else{
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- r_values[i]
+  }
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      kmo_i <- psych::KMO(correlation_matrix_i)
+    },
+    error = function(e) kmo_i <- list(overall = NA, individual = rep(NA, k))
+  )
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output <- data.frame(r = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)]), overall = kmo_i$MSA)
+  output <- cbind(output, kmos_i)
+  colnames(output) <- c("r", "overall", paste0("m", 1:k))
+  return(output)
+}
+
+# 5 variables
+k <- 5
+kmo_codependence_5_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  if(i != 1){
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, r_values[i-1], r_values[i])
+  }else{
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- r_values[i]
+  }
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      kmo_i <- psych::KMO(correlation_matrix_i)
+    },
+    error = function(e) kmo_i <- list(overall = NA, individual = rep(NA, k))
+  )
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output <- data.frame(r = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)]), overall = kmo_i$MSA)
+  output <- cbind(output, kmos_i)
+  colnames(output) <- c("r", "overall", paste0("m", 1:k))
+  return(output)
+}
+
+# 10 variables
+k <- 10
+kmo_codependence_10_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  if(i != 1){
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, r_values[i-1], r_values[i])
+  }else{
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- r_values[i]
+  }
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      kmo_i <- psych::KMO(correlation_matrix_i)
+    },
+    error = function(e) kmo_i <- list(overall = NA, individual = rep(NA, k))
+  )
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output <- data.frame(r = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)]), overall = kmo_i$MSA)
+  output <- cbind(output, kmos_i)
+  colnames(output) <- c("r", "overall", paste0("m", 1:k))
+  return(output)
+}
+
+# 20 variables
+k <- 20
+kmo_codependence_20_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  if(i != 1){
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, r_values[i-1], r_values[i])
+  }else{
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- r_values[i]
+  }
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      kmo_i <- psych::KMO(correlation_matrix_i)
+    },
+    error = function(e) kmo_i <- list(overall = NA, individual = rep(NA, k))
+  )
+  kmos_i <- kmo_i$MSAi |> as.matrix() |> t() |> as.data.frame()
+  output <- data.frame(r = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)]), overall = kmo_i$MSA)
+  output <- cbind(output, kmos_i)
+  colnames(output) <- c("r", "overall", paste0("m", 1:k))
+  return(output)
+}
+kmo_codependence_results_plot <- ggpubr::ggarrange(
+  kmo_codependence_3_variables_results %>% ggplot(aes(x = r, y = overall)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(0, 1, .1), limits = c(0, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Overall KMO index",
+      title = "k = 3"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  kmo_codependence_5_variables_results %>% ggplot(aes(x = r, y = overall)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(0, 1, .1), limits = c(0, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Overall KMO index",
+      title = "k = 5"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  kmo_codependence_10_variables_results %>% ggplot(aes(x = r, y = overall)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(0, 1, .1), limits = c(0, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Overall KMO index",
+      title = "k = 10"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  kmo_codependence_20_variables_results %>% ggplot(aes(x = r, y = overall)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(0, 1, .1), limits = c(0, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Overall KMO index",
+      title = "k = 20"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  ncol = 2,
+  nrow = 2,
+  align = "v"
+)
+save(kmo_codependence_results_plot, file = "Plots/kmo_codependence_results_plot.rda", version = 2)
+
+
+
+
+
+# Estimated KMO index range ---------------------------------------
+
+df_list <- list(kmo_independence_3_variables_results, kmo_independence_5_variables_results, kmo_independence_10_variables_results, kmo_independence_20_variables_results, kmo_codependence_3_variables_results, kmo_codependence_5_variables_results, kmo_codependence_10_variables_results, kmo_codependence_20_variables_results)
+
+all_values <- unlist(lapply(df_list, function(df) {
+  df_filtered <- df[ , !(names(df) %in% c("r", "overall"))]
+  as.numeric(unlist(df_filtered))
+}))
+
+range(all_values, na.rm = TRUE)
+# 2.54e-09 - 9.98e-01
+
+mean(all_values < .5, na.rm = TRUE)*100
+# 6.02%
+
+mean(all_values > .95, na.rm = TRUE)*100
+# 3.03%
+
+mean(all_values == .5, na.rm = TRUE)*100
+# 83.2%
+
+
+
+
+
+# Association between Correlations & Partial Correlations ---------------------------------------
+
+# Inter-correlations from perfectly negative to perfectly positive
+r_values <- seq(-1, 1, length.out = posterior_samples)
+
+# 3 variables
+k <- 3
+cor_parcor_association_3_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  if(i != 1){
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, r_values[i-1], r_values[i])
+  }else{
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- r_values[i]
+  }
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      anti_image_correlation_matrix_i <- cor_anti_image(correlation_matrix_i)
+      anti_image_correlation_mean <- mean(anti_image_correlation_matrix_i[upper.tri(anti_image_correlation_matrix_i)], na.rm = TRUE)
+    },
+    error = function(e) anti_image_correlation_mean <- rep(NA, k)
+  )
+  output <- data.frame(
+    r_mean = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)], na.rm = TRUE),
+    r_anti_image_mean = anti_image_correlation_mean
+  )
+  return(output)
+}
+
+# 5 variables
+k <- 5
+cor_parcor_association_5_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  if(i != 1){
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, r_values[i-1], r_values[i])
+  }else{
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- r_values[i]
+  }
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      anti_image_correlation_matrix_i <- cor_anti_image(correlation_matrix_i)
+      anti_image_correlation_mean <- mean(anti_image_correlation_matrix_i[upper.tri(anti_image_correlation_matrix_i)], na.rm = TRUE)
+    },
+    error = function(e) anti_image_correlation_mean <- rep(NA, k)
+  )
+  output <- data.frame(
+    r_mean = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)], na.rm = TRUE),
+    r_anti_image_mean = anti_image_correlation_mean
+  )
+  return(output)
+}
+
+# 10 variables
+k <- 10
+cor_parcor_association_10_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  if(i != 1){
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, r_values[i-1], r_values[i])
+  }else{
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- r_values[i]
+  }
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      anti_image_correlation_matrix_i <- cor_anti_image(correlation_matrix_i)
+      anti_image_correlation_mean <- mean(anti_image_correlation_matrix_i[upper.tri(anti_image_correlation_matrix_i)], na.rm = TRUE)
+    },
+    error = function(e) anti_image_correlation_mean <- rep(NA, k)
+  )
+  output <- data.frame(
+    r_mean = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)], na.rm = TRUE),
+    r_anti_image_mean = anti_image_correlation_mean
+  )
+  return(output)
+}
+
+# 20 variables
+k <- 20
+cor_parcor_association_20_variables_results <- foreach::foreach(i = 1:posterior_samples, .combine = "rbind") %dopar% {
+  correlation_matrix_i <- trialr::rlkjcorr(1, k)
+  if(i != 1){
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- runif(k, r_values[i-1], r_values[i])
+  }else{
+    correlation_matrix_i[upper.tri(correlation_matrix_i)] <- r_values[i]
+  }
+  correlation_matrix_i[lower.tri(correlation_matrix_i)] <- t(correlation_matrix_i)[lower.tri(t(correlation_matrix_i))]
+  tryCatch(
+    expr = {
+      anti_image_correlation_matrix_i <- cor_anti_image(correlation_matrix_i)
+      anti_image_correlation_mean <- mean(anti_image_correlation_matrix_i[upper.tri(anti_image_correlation_matrix_i)], na.rm = TRUE)
+    },
+    error = function(e) anti_image_correlation_mean <- rep(NA, k)
+  )
+  output <- data.frame(
+    r_mean = mean(correlation_matrix_i[upper.tri(correlation_matrix_i)], na.rm = TRUE),
+    r_anti_image_mean = anti_image_correlation_mean
+  )
+  return(output)
+}
+cor_parcor_association_results_plot <- ggpubr::ggarrange(
+  cor_parcor_association_3_variables_results %>% ggplot(aes(x = r_mean, y = r_anti_image_mean)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Mean Anti-Image Inter-Correlation",
+      title = "k = 3"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  cor_parcor_association_5_variables_results %>% ggplot(aes(x = r_mean, y = r_anti_image_mean)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Mean Anti-Image Inter-Correlation",
+      title = "k = 5"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  cor_parcor_association_10_variables_results %>% ggplot(aes(x = r_mean, y = r_anti_image_mean)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Mean Anti-Image Inter-Correlation",
+      title = "k = 10"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  cor_parcor_association_20_variables_results %>% ggplot(aes(x = r_mean, y = r_anti_image_mean)) +
+    geom_point() +
+    theme_classic() +
+    scale_x_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    scale_y_continuous(breaks = seq(-1, 1, .1), limits = c(-1, 1)) +
+    labs(
+      x = "Mean Inter-Correlation",
+      y = "Mean Anti-Image Inter-Correlation",
+      title = "k = 20"
+    )+
+    theme(
+      axis.title.x = element_text(margin = ggplot2::margin(t = 10)),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 10))
+    ),
+  ncol = 2,
+  nrow = 2,
+  align = "v"
+)
+save(cor_parcor_association_results_plot, file = "Plots/cor_parcor_association_results_plot.rda", version = 2)
+```
+
+
+### Association between Inter-Correlations & Partial Inter-Correlations {#sec:sec_mcmc_correlation_common_unique_appendix}
+```{r load_cor_parcor_association_results_plot, include = FALSE, eval = TRUE}
+load("Plots/cor_parcor_association_results_plot.rda")
+```
+
+```{r cor-parcor-association-results-plot, echo = FALSE, message = FALSE, fig.align = "left", fig.topcaption = TRUE, fig.cap = "Association between Inter-Correlations \\& Partial Inter-Correlations", eval = TRUE}
+cor_parcor_association_results_plot
+```
+\vspace{-1.5em}
+\begingroup
+\noindent
+\fontsize{8pt}{10pt}\selectfont
+\linespread{1}\selectfont
+**NOTE**: Simulated data, with `r posterior_samples %>% qformat()` simulations for each panel.
+\endgroup
+\vspace{1em}
+
+
+### Independent Inter-Correlations {#sec:sec_mcmc_correlation_independent_appendix}
+
+```{r load_kmo_independence_results_plot, include = FALSE, eval = TRUE}
+load("Plots/kmo_independence_results_plot.rda")
+```
+
+```{r kmo-independence-results-plot, echo = FALSE, message = FALSE, fig.align = "left", fig.topcaption = TRUE, fig.cap = "KMO index Characteristics with Independent Inter-Correlations", eval = TRUE}
+kmo_independence_results_plot
+```
+\vspace{-1.5em}
+\begingroup
+\noindent
+\fontsize{8pt}{10pt}\selectfont
+\linespread{1}\selectfont
+**NOTE**: Simulated data, with `r posterior_samples %>% qformat()` simulations for each panel.
+\endgroup
+\vspace{1em}
+
+
+### Codependent Inter-Correlations {#sec:sec_mcmc_correlation_codependent_appendix}
+```{r load_kmo_codependence_results_plot, include = FALSE, eval = TRUE}
+load("Plots/kmo_codependence_results_plot.rda")
+```
+
+```{r kmo-codependence-results-plot, echo = FALSE, message = FALSE, fig.align = "left", fig.topcaption = TRUE, fig.cap = "KMO index Characteristics with Codependent Inter-Correlations", eval = TRUE}
+kmo_codependence_results_plot
+```
+\vspace{-1.5em}
+\begingroup
+\noindent
+\fontsize{8pt}{10pt}\selectfont
+\linespread{1}\selectfont
+**NOTE**: Simulated data, with `r posterior_samples %>% qformat()` simulations for each panel.
+\endgroup
+\vspace{1em}
+
+
+## Correlation Matrix {#sec:sec_simulated_correlation_matrix_appendix}
+
+The matrix showcasing the results from the Monte Carlo simulated data covered in section \ref{sec:sec_kmo_example} is provided here. The lower diagonal of the matrix in table \@ref(tab:cor-parcor-table) showcases the estimated correlations (i.e, $\hat{P}$), with the upper diagonal containing the upper triangle of the anti-image correlation matrix (i.e, $\hat{P}_q$) computed using the inverse correlation matrix (i.e, $\hat{P}^{-1}$), while the diagonal displays the the individual KMO indices, one for each manifestation.
+
+```{r cor-parcor-table}
+cor_parcor %>%
+  knitr::kable(
+    #format = "simple",
+    digits = digits$table,
+    row.names = TRUE,
+    booktabs = TRUE,
+    caption = ("Matrix"),
+    format.args = list(
+      big.mark = ",",
+      scientific = FALSE
+    ),
+    escape = FALSE,
+    align = "c"
+  ) %>%
+  kableExtra::kable_styling(
+    full_width = FALSE,
+    position = "center",
+    fixed_thead = TRUE,
+    latex_options = c("striped", "repeat_header", "HOLD_position")
+  )
+```
+\vspace{-1.5em}
+\begingroup
+\noindent
+\fontsize{8pt}{10pt}\selectfont
+\linespread{1}\selectfont
+**NOTE:** Matrix ($\hat{P}$) provided in the lower triangle, anti-image correlation matrix ($\hat{P}_q$) provided in the upper triangle, and KMO indices provided in the diagonal. Based on simulated data (n = `r sample_size %>% qformat()`) and computed using Frequentist estimators (see functions 2.2.1 - 2.2.8 in Section \ref{sec:sec_kmo_formula}).
+\endgroup
+\vspace{1em}
+
+\newpage
+
+## Citation {#sec:sec_citation_appendix}
+
+<p style="margin: 0;">Building on previous conceptualizations [@Kaiser1970; @KaiserAndRice1974; @Kaiser1981], the *Bayesian Keiser-Meyer-Olkin* (BKMO) index is an original Bayesian re-conceptualization by Emil Niclas Meyer-Hansen, conceived as part of this paper. For correspondence, contact the author via email: emil098meyerhansen@gmail.com.</p>
+
+<p style="text-indent: 2em;">Please, if you use, refer to, modify, and/or continue the development of the Bayesian KMO index, provide proper reference and citation to its founding author. An example of proper citation is provided below:</p>
+
+- Meyer-Hansen, E. N. (2025): *Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index*. Working Paper (Initial Release): v`r format(Sys.time(), "%Y-%m-%d-%H-%M")`, on Open Science Framework. DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
+
+<p style="margin: 0;">For LaTeX users, a BibTeX entry is provided below:</p>
+```{r citation, eval = FALSE, echo = TRUE}
+@unpublished{,
+  title = {Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index},
+  author = {Emil Niclas Meyer-Hansen},
+  publisher = {Open Science Framework},
+  year = {2025},
+  doi = {10.17605/OSF.IO/T3UPD},
+  pubstate = {Working Paper (Initial Release)}
+}
+```
