@@ -23,6 +23,9 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
   - [Version 2025-09-19-10-52] - Working Paper
     - Major corrections/revisions of notation and text.
     - Added more content to discussions of a Robust (B)KMO index.
+    - Removed changelog and citation sections.
+    - Added suggested citation to the first page.
+    - Subtle changes to the wording of the licence.
 - **2025-06-05 07:28 CEST**
   - [Version 2025-06-03-09-14-HTML] - Working Paper (HTML Version).
 - **2025-06-03 09:14 CEST**
