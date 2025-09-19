@@ -2,7 +2,7 @@
 
 *Emil Niclas Meyer-Hansen*
 
-05/06/2025
+19/09/2025
 
 The Bayesian KMO (BKMO) index is introduced in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index*. This paper subscribes to the [*open science standard*](https://www.cos.io/open-science) and is made freely available, in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
 
