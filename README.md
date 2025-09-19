@@ -10,16 +10,19 @@ The Bayesian KMO (BKMO) index is introduced in the research paper *Revisiting â€
 
 The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by researchers to assess whether a data matrix is factorable prior to a factor analysis. Since its conception, the KMO index has remained a Frequentist statistic, leaving researchers unable to employ the advantages of Bayesian inference when assessing sampling adequacy. Building on the increasing relevance of the Bayesian statistical approach, as well as advancements in Markov-Chain Monte Carlo methods, the author proposes a re-conceptualization of the KMO index within the Bayesian framework that enables researchers to incorporate prior information and make coherent probabilistic statements about the sampling adequacy of a data matrix.Â©
 
-**Keywords**: *Kaiser-Meyer-Olkin index, KMO, Bayesian Kaiser-Meyer-Olkin index, BKMO, Measure of Sampling Adequacy, MSA, Bayesian Measure of Sampling Adequacy, BMSA, Robust KMO index, Bootstrap KMO index, Bayesian inference, Likelihood-based inference, Frequentist inference*
+**Keywords**: *Kaiser-Meyer-Olkin index, KMO, Bayesian Kaiser-Meyer-Olkin index, BKMO, Measure of Sampling Adequacy, MSA, Bayesian Measure of Sampling Adequacy, BMSA, Bootstrap KMO index, Robust KMO index, Robust BKMO index, Bayesian inference, Likelihood-based inference, Frequentist inference*
 
 ## FAQ
 - The newest iteration of the research paper (in PDF-format) is made available in the 'Newest'-folder.
-- An archive of different iterations of the research paper and materials, including source data and data, are made freely available in the 'Archive'-folder.
-- A version of the newest iteration of the research paper is also made available in HTML-format at the URL: (https://emeyer-hansen.github.io/bayesian-kmo/)
+- An archive of different iterations of the research paper and materials, including data and plots, are made freely available in the 'Archive'-folder. Due to Github-limitations on file size, data is provided on its OSF project page instead (see below).
+- A version of the research paper is also made available in HTML-format at the URL: (https://emeyer-hansen.github.io/bayesian-kmo/)
 - Materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
 
 ## Changelog
-
+- **2025-09-19 10:52 CEST**
+  - [Version 2025-09-19-10-52] - Working Paper
+    - Major corrections/revisions of notation and text.
+    - Added more content to discussions of a Robust (B)KMO index.
 - **2025-06-05 07:28 CEST**
   - [Version 2025-06-03-09-14-HTML] - Working Paper (HTML Version).
 - **2025-06-03 09:14 CEST**
@@ -29,7 +32,7 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
 
 ## License (Addendum)
 
-Except where otherwise indicated, all contents of this document and associated files are licensed under the *Creative Commons Attribution 4.0 International License* ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)). All software, source code, executable code, code snippets, code chunks, algorithms, and/or scripts within this document and associated files are expressly excluded from the foregoing license, and unless otherwise indicated, are instead licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)). By engaging with this document and/or any associated files, which include, but are not necessarily limited to, downloading, using, and/or distributing any of them, in parts of whole, you agree to comply with the applicable license terms for the respective content types.
+Except where otherwise indicated, all contents of this document and/or associated files are licensed under the *Creative Commons Attribution 4.0 International License* ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)). All software, including but *not* necessarily limited to, source code, executable code, code snippets, code chunks, algorithms, and/or scripts, attributable to this document and/or its associated files are expressly excluded from the foregoing license, and unless otherwise indicated, are instead licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)). By engaging with this document and/or any associated files, which include, but are *not* necessarily limited to, downloading, using, viewing, and/or distributing any of them, in parts of whole, you agree to comply with the applicable license terms for the respective content types.
 
 ## Citation
 
@@ -37,7 +40,7 @@ Building on previous conceptualizations, the *Bayesian Keiser-Meyer-Olkin* (BKMO
 
 Please, if you use, refer to, modify, and/or continue the development of the Bayesian KMO index, provide proper reference and citation to its founding author. An example of proper citation is provided below:
 ```
-Meyer-Hansen, E. N. (2025): *Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index*. Working Paper (v2025-06-03-09-14), on the Open Science Framework. DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
+Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', *Open Science Framework*, Working paper (v2025-09-19-10-52). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
 ```
 
 For LaTeX users, a BibTeX entry is provided below:
@@ -48,6 +51,6 @@ For LaTeX users, a BibTeX entry is provided below:
   publisher = {Open Science Framework},
   year = {2025},
   doi = {10.17605/OSF.IO/T3UPD},
-  pubstate = {Working Paper (v2025-06-03-09-14)}
+  pubstate = {Working Paper (v2025-09-19-10-52)}
 }
 ```
