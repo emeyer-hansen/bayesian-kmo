@@ -19,6 +19,10 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
 - Materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
 
 ## Changelog
+- **2025-09-20 14:45 CEST** 
+  - [Version 2025-09-19-10-52-HTML] - Working Paper
+    - HTML-version of v2025-09-19-10-52
+    - Corrected 'Partial' to 'Anti-image' in Appendix
 - **2025-09-19 10:52 CEST**
   - [Version 2025-09-19-10-52] - Working Paper
     - Major corrections/revisions of notation and text.
