@@ -9,7 +9,7 @@
 
 The Bayesian KMO (BKMO) index is introduced by the author in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index* (see the [Abstract](#abstract) below). This paper subscribes to the [*open science standard*](https://www.cos.io/open-science), is partly licensed under the CC BY 4.0 and partly under the GPL-3.0 (see the [License](#license) below), and it is made freely available in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
 
-The function for computing the BKMO index developed in the paper is made freely available here (see the 'BKMO function'-file). In accordance with the license for the paper, it is licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)).
+The function for computing the BKMO index developed in the paper is made freely available here (see the 'bkmo-R-function'-file). In accordance with the license for the paper, it is licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)).
 
 ## Table of Contents
 - [Abstract](#abstract)
