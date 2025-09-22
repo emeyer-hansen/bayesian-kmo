@@ -60,11 +60,11 @@ Except where otherwise indicated, all contents of this document and/or associate
 <a id="citation"></a>
 ## Citation
 
-Building on previous conceptualizations, the *Bayesian Keiser-Meyer-Olkin* (BKMO) index is an original Bayesian re-conceptualization by Emil Niclas Meyer-Hansen, conceived as part of the paper. For correspondence, contact the author via email: mailto:emil098meyerhansen@gmail.com
+Building on previous conceptualizations, the *Bayesian Keiser-Meyer-Olkin* (BKMO) index is an original Bayesian re-conceptualization by Emil Niclas Meyer-Hansen, conceived as part of the paper. For correspondence, contact the author via email: [emil098meyerhansen@gmail.com](mailto:emil098meyerhansen@gmail.com)
 
 Please, if you use, refer to, modify, and/or continue the development of the Bayesian KMO index, provide proper reference and citation to its founding author. An example of proper citation is provided below:
 ```
-Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', *Open Science Framework*, Working paper (v2025-09-19-10-52). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
+Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', Open Science Framework, Working paper (v2025-09-19-10-52). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
 ```
 
 For LaTeX users, a BibTeX entry is provided below:
