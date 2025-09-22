@@ -4,7 +4,7 @@
 # Bayesian Kaiser-Meyer-Olkin index
 
 ## Description
-Function for computing the *Bayesian Kaiser-Meyer-Olkin* (BKMO) index, which is *a measure of the posterior 'sampling adequacy' of the data matrix given the (modeled) data* (Meyer-Hansen, 2025).
+Function for computing the *Bayesian Kaiser-Meyer-Olkin* (BKMO) index, which is *a measure of the posterior 'sampling adequacy' of the data matrix given the (modeled) data* (cf. Meyer-Hansen, 2025). The function is written using the $\textsf{R}$ programming language ($\textsf{R}$ Core Team, 2024).
 
 ## Usage
 ```r
@@ -12,11 +12,11 @@ BKMO(r = NULL)
 ```
 
 ## Arguments
-`r` Matrix of inter-correlations, where columns are variables and rows are posterior draws
+`r` Matrix of inter-correlations, where columns are variables and rows are posterior draws (e.g., a matrix returned by the [`brms::as_draws_matrix`](https://cran.r-project.org/web/packages/brms/index.html), Bürkner, 2017; 2018)
 
 ## Details
 
-The BKMO index is the posterior 'sampling adequacy' of a data matrix given the (modeled) data, which refers to the probability that the data matrix is factorable given the (linear) relationships between variables and prior beliefs about these relationships. It was introduced by Emil Niclas Meyer-Hansen (2025) and is a Bayesian reconceptualization of the Frequentist 'Mark IV' KMO index by Henry F. Kaiser, Edward P. Meyer, Ingram Olkin, and John Rice (Kaiser & Rice, 1974).
+The BKMO index is the posterior 'sampling adequacy' of a data matrix given the (modeled) data, which refers to the probability that the data matrix is factorable given the (linear) relationships between variables and prior beliefs about these relationships (cf. Meyer-Hansen, 2025). It was introduced by Emil Niclas Meyer-Hansen (2025) and is a Bayesian reconceptualization of the Frequentist 'Mark IV' KMO index by Henry F. Kaiser, Edward P. Meyer, Ingram Olkin, and John Rice (Kaiser & Rice, 1974).
 
 ## Value
 
@@ -71,8 +71,13 @@ BKMO <- function(r = NULL){
 
 ## References
 
+- Bürkner, P.-C. (2017): 'brms: An R package for Bayesian multilevel models using Stan', *Journal of Statistical Software*, 80: 1–28. DOI: [10.18637/jss.v080.i01](https://doi.org/10.18637/jss.v080.i01)
+- Bürkner, P.-C. (2018): 'Advanced Bayesian multilevel modeling with the R package brms', *The R Journal*, 10: 395–411. DOI: [10.32614/RJ-2018-017](https://doi.org/10.32614/RJ-2018-017)
 - Kaiser, H. F., and J. Rice (1974): 'Little Jiffy, Mark IV', *Educational and Psychological Measurement*, 34(1): 111–117. DOI: [10.1177/001316447403400115](https://doi.org/10.1177/001316447403400115)
+- Lüdecke, D., M. S. Ben-Shachar, I. Patil, P. Waggoner, & D. Makowski (2021): 'performance: An R package for assessment, comparison and testing of statistical models', *Journal of Open Source Software*, 6(60): 3139. DOI: [10.21105/joss.03139](https://doi.org/10.21105/joss.03139)
 - Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', *Open Science Framework*, Working paper (v2025-09-19-10-52). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
+- $\textsf{R}$ Core Team (2024): *$\textsf{R}$: A language and environment for statistical computing*. $\textsf{R}$ Foundation for Statistical Computing.
+- Revelle, W. (2025): *psych: Procedures for psychological, psychometric, and personality research*. Northwestern University.
 
 ## Author
 
@@ -84,7 +89,7 @@ BKMO <- function(r = NULL){
 
 ## See also
 
-[`psych::KMO`](https://cran.r-project.org/web/packages/psych/index.html) for computing the Frequentist KMO index.
+[`psych::KMO`](https://cran.r-project.org/web/packages/psych/index.html) (Revelle, 2025) or [`performance::check_kmo`](https://cran.r-project.org/web/packages/performance/index.html) for computing the Frequentist KMO index.
 
 ## Example
 
