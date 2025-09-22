@@ -1,23 +1,38 @@
+[_metadata_:author]:- "Emil Niclas Meyer-Hansen"
+[_metadata_:date]:- "22/09/2025"
+[_metadata_:tags]:- "markdown metadata"
 # Bayesian KMO Index
 
 *Emil Niclas Meyer-Hansen*
 
-19/09/2025
+22/09/2025
 
-The Bayesian KMO (BKMO) index is introduced in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index*. This paper subscribes to the [*open science standard*](https://www.cos.io/open-science) and is made freely available, in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
+The Bayesian KMO (BKMO) index is introduced by the author in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index* (see the [Abstract](#abstract) below). This paper subscribes to the [*open science standard*](https://www.cos.io/open-science), is partly licensed under the CC BY 4.0 and partly under the GPL-3.0 (see the [License](#license) below), and it is made freely available in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
 
+The function for computing the BKMO index developed in the paper is made freely available here (see the 'BKMO function'-file). In accordance with the license for the paper, it is licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)).
+
+## Table of Contents
+- [Abstract](#abstract)
+- [FAQ](#faq)
+- [Changelog](#changelog)
+- [License](#license)
+- [Citation](#citation)
+
+<a id="abstract"></a>
 ## Abstract
 
-The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by researchers to assess whether a data matrix is factorable prior to a factor analysis. Since its conception, the KMO index has remained a Frequentist statistic, leaving researchers unable to employ the advantages of Bayesian inference when assessing sampling adequacy. Building on the increasing relevance of the Bayesian statistical approach, as well as advancements in Markov-Chain Monte Carlo methods, the author proposes a re-conceptualization of the KMO index within the Bayesian framework that enables researchers to incorporate prior information and make coherent probabilistic statements about the sampling adequacy of a data matrix.©
+The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by researchers to assess whether a data matrix is factorable prior to a factor analysis. Since its conception, the KMO index has remained a Frequentist statistic, leaving researchers unable to employ the advantages of Bayesian inference when assessing sampling adequacy. Building on the increasing relevance of the Bayesian statistical approach, as well as advancements in Markov-Chain Monte Carlo methods, the author proposes a re-conceptualization of the KMO index within the Bayesian framework that enables researchers to incorporate prior information and make coherent probabilistic statements about the sampling adequacy of a data matrix.[©](#license)
 
 **Keywords**: *Kaiser-Meyer-Olkin index, KMO, Bayesian Kaiser-Meyer-Olkin index, BKMO, Measure of Sampling Adequacy, MSA, Bayesian Measure of Sampling Adequacy, BMSA, Bootstrap KMO index, Robust KMO index, Robust BKMO index, Bayesian inference, Likelihood-based inference, Frequentist inference*
 
+<a id="faq"></a>
 ## FAQ
 - The newest iteration of the research paper (in PDF-format) is made available in the 'Newest'-folder.
 - An archive of different iterations of the research paper and materials, including data and plots, are made freely available in the 'Archive'-folder. Due to Github-limitations on file size, data is provided on its OSF project page instead (see below).
 - A version of the research paper is also made available in HTML-format at the URL: (https://emeyer-hansen.github.io/bayesian-kmo/)
 - Materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
 
+<a id="changelog"></a>
 ## Changelog
 - **2025-09-20 14:45 CEST** 
   - [Version 2025-09-19-10-52-HTML] - Working Paper
@@ -37,13 +52,15 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
 - **2025-05-20 10:29 CEST**
   - [Version 2025-05-20-10-29] - Working Paper (Initial Release).
 
+<a id="license"></a>
 ## License (Addendum)
 
 Except where otherwise indicated, all contents of this document and/or associated files are licensed under the *Creative Commons Attribution 4.0 International License* ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)). All software, including but *not* necessarily limited to, source code, executable code, code snippets, code chunks, algorithms, and/or scripts, attributable to this document and/or its associated files are expressly excluded from the foregoing license, and unless otherwise indicated, are instead licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)). By engaging with this document and/or any associated files, which include, but are *not* necessarily limited to, downloading, using, viewing, and/or distributing any of them, in parts of whole, you agree to comply with the applicable license terms for the respective content types.
 
+<a id="citation"></a>
 ## Citation
 
-Building on previous conceptualizations, the *Bayesian Keiser-Meyer-Olkin* (BKMO) index is an original Bayesian re-conceptualization by Emil Niclas Meyer-Hansen, conceived as part of this paper. For correspondence, contact the author via email: emil098meyerhansen@gmail.com.
+Building on previous conceptualizations, the *Bayesian Keiser-Meyer-Olkin* (BKMO) index is an original Bayesian re-conceptualization by Emil Niclas Meyer-Hansen, conceived as part of the paper. For correspondence, contact the author via email: mailto:emil098meyerhansen@gmail.com
 
 Please, if you use, refer to, modify, and/or continue the development of the Bayesian KMO index, provide proper reference and citation to its founding author. An example of proper citation is provided below:
 ```
