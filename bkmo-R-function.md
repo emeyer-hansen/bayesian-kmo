@@ -12,13 +12,15 @@ BKMO(r = NULL)
 ```
 
 ## Arguments
-| r      | Matrix of inter-correlations, where columns are variables and rows are posterior draws       |
+`r` Matrix of inter-correlations, where columns are variables and rows are posterior draws
 
 ## Details
 
 The BKMO index is the posterior 'sampling adequacy' of a data matrix given the (modeled) data, which refers to the probability that the data matrix is factorable given the (linear) relationships between variables and prior beliefs about these relationships. It was introduced by Emil Niclas Meyer-Hansen (2025) and is a Bayesian reconceptualization of the Frequentist 'Mark IV' KMO index by Henry F. Kaiser, Edward P. Meyer, Ingram Olkin, and John Rice (Kaiser & Rice, 1974).
 
 ## Value
+
+Matrix of BKMO index values, where columns consist of one BKMO index for each input variable and one overall BKMO index, while rows are posterior draws.
 
 ## Function
 
@@ -69,8 +71,8 @@ BKMO <- function(r = NULL){
 
 ## References
 
-- Kaiser, H. F., and J. Rice (1974): 'Little Jiffy, Mark IV', \emph{Educational and Psychological Measurement}, 34(1): 111–117. DOI: [10.1177/001316447403400115](https://doi.org/10.1177/001316447403400115)
-- Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', \emph{Open Science Framework}, Working paper (v2025-09-19-10-52). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
+- Kaiser, H. F., and J. Rice (1974): 'Little Jiffy, Mark IV', *Educational and Psychological Measurement*, 34(1): 111–117. DOI: [10.1177/001316447403400115](https://doi.org/10.1177/001316447403400115)
+- Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', *Open Science Framework*, Working paper (v2025-09-19-10-52). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
 
 ## Author
 
@@ -82,7 +84,7 @@ BKMO <- function(r = NULL){
 
 ## See also
 
-[`KMO`](https://cran.r-project.org/web/packages/psych/index.html) for computing the Frequentist KMO index.
+[`psych::KMO`](https://cran.r-project.org/web/packages/psych/index.html) for computing the Frequentist KMO index.
 
 ## Example
 
@@ -188,4 +190,4 @@ print(
 ```
 
 ---
-Revised 22.9.2025 - [Emil Niclas Meyer-Hansen](mailto:emil098meyerhansen@gmail.com)
+Revised 9-22-2025 - [Emil Niclas Meyer-Hansen](mailto:emil098meyerhansen@gmail.com)
