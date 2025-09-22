@@ -1,11 +1,11 @@
 [_metadata_:author]:- "Emil Niclas Meyer-Hansen"
-[_metadata_:date]:- "22/09/2025"
+[_metadata_:date]:- "2025-9-225"
 [_metadata_:tags]:- "markdown metadata"
 # Bayesian KMO Index
 
 *Emil Niclas Meyer-Hansen*
 
-22/09/2025
+2025-09-22
 
 The Bayesian KMO (BKMO) index is introduced by the author in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index* (see the [Abstract](#abstract) below). This paper subscribes to the [*open science standard*](https://www.cos.io/open-science), is partly licensed under the CC BY 4.0 and partly under the GPL-3.0 (see the [License](#license) below), and it is made freely available in PDF-format (see the 'Newest'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/).
 
