@@ -28,7 +28,7 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
 <a id="faq"></a>
 ## FAQ
 - The newest iteration of the research paper (in PDF-format) is made available in the 'Newest'-folder.
-- An archive of different iterations of the research paper and materials, including data and plots, are made freely available in the 'Archive'-folder. Due to Github-limitations on file size, data is provided on its OSF project page instead (see below).
+- An archive of different iterations of the research paper and materials are made freely available in the 'Archive'-folder. Due to Github-limitations on file size, data and plots are provided on its OSF project page instead (see below).
 - A version of the research paper is also made available in HTML-format at the URL: (https://emeyer-hansen.github.io/bayesian-kmo/)
 - Materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
 
