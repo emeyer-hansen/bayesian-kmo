@@ -23,7 +23,7 @@ The R function for computing the BKMO index developed in the paper is made freel
 
 The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by researchers to assess whether a data matrix is factorable prior to a factor analysis. Since its conception, the KMO index has remained a Frequentist statistic, leaving researchers unable to employ the advantages of Bayesian inference when assessing sampling adequacy. Building on the increasing relevance of the Bayesian statistical approach, as well as advancements in Markov-Chain Monte Carlo methods, the author proposes a re-conceptualization of the KMO index within the Bayesian framework that enables researchers to incorporate prior information and make coherent probabilistic statements about the sampling adequacy of a data matrix.[©](#license)
 
-**Keywords**: *Kaiser-Meyer-Olkin index, KMO, Bayesian Kaiser-Meyer-Olkin index, BKMO, Measure of Sampling Adequacy, MSA, Bayesian Measure of Sampling Adequacy, BMSA, Bootstrap KMO index, Robust BKMO index, Bayesian inference, Frequentist inference*
+**Keywords**: *Kaiser-Meyer-Olkin index, KMO index, Bayesian Kaiser-Meyer-Olkin index, BKMO index, Measure of Sampling Adequacy, MSA, Bayesian Measure of Sampling Adequacy, BMSA, Bootstrap KMO index, Robust BKMO index, Bayesian inference, Frequentist inference*
 
 <a id="faq"></a>
 ## FAQ
