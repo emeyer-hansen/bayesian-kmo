@@ -4,7 +4,7 @@
 # Bayesian Kaiser-Meyer-Olkin index
 
 ## Description
-Function for computing the *Bayesian Kaiser-Meyer-Olkin* (BKMO) index, which is *a measure of the posterior 'sampling adequacy' of the data matrix given the (modeled) data* (cf. Meyer-Hansen, 2025). The function is written using the $\textsf{R}$ programming language (R Core Team, 2025).
+Function for computing the *Bayesian Kaiser-Meyer-Olkin* (BKMO) index, which is *a measure of the posterior 'sampling adequacy' of the data matrix given the (modeled) data* (cf. Meyer-Hansen, 2025). The function is written using the $\textsf{R}$ programming language (v4.4.3 [2025-02-28 ucrt]; R Core Team, 2025).
 
 ## Usage
 ```r
@@ -12,7 +12,7 @@ BKMO(r = NULL)
 ```
 
 ## Arguments
-`r` Matrix of inter-correlations, where columns are variables and rows are posterior draws (e.g., a matrix returned by the [`brms::as_draws_matrix`](https://cran.r-project.org/web/packages/brms/index.html) function, Bürkner, 2017; 2018)
+`r` Matrix of inter-correlations, where columns are variables and rows are posterior draws. For example, a matrix returned by the [`brms::as_draws_matrix`](https://cran.r-project.org/web/packages/brms/index.html) function from the `brms` R package (v2.22.0; Bürkner, 2017; 2018).
 
 ## Details
 
@@ -89,7 +89,7 @@ BKMO <- function(r = NULL){
 
 ## See also
 
-[`psych::KMO`](https://cran.r-project.org/web/packages/psych/index.html) (Revelle, 2025) or [`performance::check_kmo`](https://cran.r-project.org/web/packages/performance/index.html) for computing the Frequentist KMO index.
+[`psych::KMO`](https://cran.r-project.org/web/packages/psych/index.html) (Revelle, 2025) or [`performance::check_kmo`](https://cran.r-project.org/web/packages/performance/index.html) (Lüdecke *et al.*, 2021) for computing the Frequentist KMO index.
 
 ## Example
 
