@@ -1,10 +1,10 @@
 [_metadata_:author]:- "Emil Niclas Meyer-Hansen"
-[_metadata_:date]:- "2025-09-22"
+[_metadata_:date]:- "2025-11-02"
 [_metadata_:tags]:- "markdown metadata"
 # Bayesian Kaiser-Meyer-Olkin index
 
 ## Description
-Function for computing the *Bayesian Kaiser-Meyer-Olkin* (BKMO) index, which is *a measure of the posterior 'sampling adequacy' of the data matrix given the (modeled) data* (cf. Meyer-Hansen, 2025). The function is written using the $\textsf{R}$ programming language (R Core Team, 2024).
+Function for computing the *Bayesian Kaiser-Meyer-Olkin* (BKMO) index, which is *a measure of the posterior 'sampling adequacy' of the data matrix given the (modeled) data* (cf. Meyer-Hansen, 2025). The function is written using the $\textsf{R}$ programming language (R Core Team, 2025).
 
 ## Usage
 ```r
@@ -71,12 +71,12 @@ BKMO <- function(r = NULL){
 
 ## References
 
-- Bürkner, P.-C. (2017): 'brms: An R package for Bayesian multilevel models using Stan', *Journal of Statistical Software*, 80: 1–28. DOI: [10.18637/jss.v080.i01](https://doi.org/10.18637/jss.v080.i01)
-- Bürkner, P.-C. (2018): 'Advanced Bayesian multilevel modeling with the R package brms', *The R Journal*, 10: 395–411. DOI: [10.32614/RJ-2018-017](https://doi.org/10.32614/RJ-2018-017)
+- Bürkner, P.-C. (2017): 'brms: An R package for Bayesian multilevel models using Stan', *Journal of Statistical Software*, 80(1): 1–28. DOI: [10.18637/jss.v080.i01](https://doi.org/10.18637/jss.v080.i01)
+- Bürkner, P.-C. (2018): 'Advanced Bayesian multilevel modeling with the R package brms', *The R Journal*, 10(1): 395–411. DOI: [10.32614/RJ-2018-017](https://doi.org/10.32614/RJ-2018-017)
 - Kaiser, H. F., and J. Rice (1974): 'Little Jiffy, Mark IV', *Educational and Psychological Measurement*, 34(1): 111–117. DOI: [10.1177/001316447403400115](https://doi.org/10.1177/001316447403400115)
 - Lüdecke, D., M. S. Ben-Shachar, I. Patil, P. Waggoner, & D. Makowski (2021): 'performance: An R package for assessment, comparison and testing of statistical models', *Journal of Open Source Software*, 6(60): 3139. DOI: [10.21105/joss.03139](https://doi.org/10.21105/joss.03139)
-- Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', *Open Science Framework*, Working paper (v2025-09-19-10-52). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
-- R Core Team (2024): *R: A language and environment for statistical computing*. R Foundation for Statistical Computing.
+- Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', *Open Science Framework*, Working paper (v2025-11-02-14-37). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
+- R Core Team (2025): *R: A language and environment for statistical computing*. R Foundation for Statistical Computing.
 - Revelle, W. (2025): *psych: Procedures for psychological, psychometric, and personality research*. Northwestern University.
 
 ## Author
@@ -94,20 +94,14 @@ BKMO <- function(r = NULL){
 ## Example
 
 ```r
-# Simulate data
-set.seed(1)
+# Load packages
 library("tidyverse")
-sample_size <- 1000
-n_manifestations <- 10
-sesoi <- .3
-loadings <- runif(n_manifestations, sesoi, .7)
-df <- data.frame(
-  latent = rnorm(sample_size)
-)
-for(i in 1:n_manifestations){
-  df[,paste0("m", i)] <- loadings[i]*df$latent + rnorm(sample_size)
-}
-df <- df %>% select(-latent)
+library("EFA.dimensions")
+
+# Load data from EFA.dimensions
+data(data_RSE)
+df <- data_RSE
+colnames(df) <- paste0("m", 1:ncol(df))
 
 # Define maximum-likelihood functions
 sd2 <- function(x = NULL, na.rm = FALSE){
@@ -137,10 +131,12 @@ df <- apply(df, 2, standardize2) %>% as.data.frame()
 # Specify MCMC
 library("parallel")
 posterior_samples <- 4000
-chains <- cores <- parallel::detectCores()-1
+chains <- cores <- ifelse(parallel::detectCores()>1, parallel::detectCores()-1, parallel::detectCores())
 warmup <- 1000
 iter <- ceiling((posterior_samples / chains) + warmup)
 posterior_samples <- (iter - warmup)*chains
+SEED <- 89881187
+set.seed(SEED)
 
 # Specify Bayesian Generalized Linear Model (BGLM)
 library("brms")
@@ -151,7 +147,6 @@ bglm_model <- brms::bf(
     link = "identity"
   )
 ) + set_rescor(TRUE)
-
 
 # Specify 'weakly-informative' model priors
 bglm_priors <- brms::get_prior(bglm_model, data = df)
@@ -171,7 +166,8 @@ bglm_fit <- brms::brm(
   chains = chains,
   cores = cores,
   iter = iter,
-  warmup = warmup
+  warmup = warmup,
+  seed = SEED
 )
 
 # Extract posterior draws of the (residual) correlations from the fitted Bayesian model
@@ -195,4 +191,4 @@ print(
 ```
 
 ---
-Revised 2025-09-22 - [Emil Niclas Meyer-Hansen](mailto:emil098meyerhansen@gmail.com)
+Revised 2025-11-02 - [Emil Niclas Meyer-Hansen](mailto:emil098meyerhansen@gmail.com)
