@@ -1,13 +1,13 @@
 [_metadata_:author]:- "Emil Niclas Meyer-Hansen"
-[_metadata_:date]:- "2025-11-02"
+[_metadata_:date]:- "2026-04-04"
 [_metadata_:tags]:- "markdown metadata"
 # Bayesian KMO Index
 
 *Emil Niclas Meyer-Hansen*
 
-2025-11-02
+2026-04-04
 
-The Bayesian KMO (BKMO) index is introduced by the author in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index* (see the [Abstract](#abstract) below). This paper subscribes to the [*open science standard*](https://www.cos.io/open-science), is partly licensed under the CC BY 4.0 and partly under the GPL-3.0 (see the [License](#license) below), and it is made freely available in PDF-format (see the 'Article - Newest Version'-folder) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/) (currently deprecated).
+The Bayesian KMO (BKMO) index is introduced by the author in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index* (see the [Abstract](#abstract) below). This paper subscribes to the [*open science standard*](https://www.cos.io/open-science), is partly licensed under the CC BY 4.0 and partly under the GPL-3.0 (see the [License](#license) below), and it is made freely available in PDF-format (see the 'Article.pdf'-file) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/) (currently deprecated).
 
 The R function for computing the BKMO index developed in the paper is made freely available here (see the 'bkmo-R-function'-file). In accordance with the license for the paper, it is licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)).
 
@@ -27,13 +27,18 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
 
 <a id="faq"></a>
 ## FAQ
-- The newest iteration of the research paper (in PDF-format) is made available in the 'Article - Newest Version'-folder.
-- An archive of different iterations of the research paper and materials are made freely available in the 'Archive'-folder. Due to Github-limitations on file size, data and plots are provided on its OSF project page instead (see below).
-- A (currently outdated) version of the research paper is also made available in HTML-format at the URL: (https://emeyer-hansen.github.io/bayesian-kmo/)
-- Materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
+- Where can I find the newest version of the article? The newest iteration of the research paper (in PDF-format) is the 'Article.pdf'-file.
+- Where can I find the data/plots used in the article? An archive of different iterations of the research paper and materials, including data and plots, are made freely available in the 'Archive'-folder.
+- Where can I find an older version of the paper? An archive of different iterations of the research paper and materials, including data and plots, are made freely available in the 'Archive'-folder.
+- Is the article provided in another format then PDF? Yes, a (currently outdated) version of the research paper is also made available in HTML-format at the URL: (https://emeyer-hansen.github.io/bayesian-kmo/)
+- Can I find the materials elsewhere? Yes, materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
 
 <a id="changelog"></a>
 ## Changelog
+- **2026-04-04 10:09 CEST** 
+  - [Version 2026-04-04-10-09] - Working Paper
+    - Major revision based on feedback from anynomous reviewer.
+    - Included systematic comparison of the BKMO index and KMO index using several different simulation conditions.
 - **2025-11-02 14:37 CEST** 
   - [Version 2025-11-02-14-37] - Working Paper
     - Major revision based on feedback from editor.
@@ -77,7 +82,7 @@ Building on previous conceptualizations, the *Bayesian Keiser-Meyer-Olkin* (BKMO
 
 Please, if you use, refer to, modify, and/or continue the development of the Bayesian KMO index, provide proper reference and citation to its founding author. An example of proper citation is provided below:
 ```
-Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', Open Science Framework, Working paper (v2025-11-02-14-37). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
+Meyer-Hansen, E. N. (2025): 'Revisiting 'Little Jiffy, Mark IV': Towards a Bayesian KMO index', Open Science Framework, Working paper (v2026-04-04-10-09). DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)
 ```
 
 For LaTeX users, a BibTeX entry is provided below:
@@ -88,6 +93,6 @@ For LaTeX users, a BibTeX entry is provided below:
   publisher = {Open Science Framework},
   year = {2025},
   doi = {10.17605/OSF.IO/T3UPD},
-  pubstate = {Working Paper (v2025-11-02-14-37)}
+  pubstate = {Working Paper (v2026-04-04-10-09)}
 }
 ```
