@@ -1,15 +1,18 @@
 [_metadata_:author]:- "Emil Niclas Meyer-Hansen"
-[_metadata_:date]:- "2026-04-04"
+[_metadata_:date]:- "2026-10-11"
 [_metadata_:tags]:- "markdown metadata"
 # Bayesian KMO Index
 
 *Emil Niclas Meyer-Hansen*
 
-2026-04-04
+2026-10-11
 
 The Bayesian KMO (BKMO) index is introduced by the author in the research paper *Revisiting ‘Little Jiffy, Mark IV’: Towards a Bayesian KMO index* (see the [Abstract](#abstract) below). This paper subscribes to the [*open science standard*](https://www.cos.io/open-science), is partly licensed under the CC BY 4.0 and partly under the GPL-3.0 (see the [License](#license) below), and it is made freely available in PDF-format (see the 'Article.pdf'-file) and [HTML-format](https://emeyer-hansen.github.io/bayesian-kmo/) (currently deprecated).
 
 The R function for computing the BKMO index developed in the paper is made freely available here (see the 'bkmo-R-function'-file). In accordance with the license for the paper, it is licensed under the *GNU General Public License, version 3* ([GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html)).
+
+**NOTE**: A revised version of the paper has passed peer-reviewed and has been **accepted for publication** in the open-access journal [Statistica](https://rivista-statistica.unibo.it/). Online publication is expected to occur in 2027.
+
 
 ## Table of Contents
 - [Abstract](#abstract)
@@ -31,10 +34,16 @@ The Kaiser-Meyer-Olkin (KMO) index is a measure of sampling adequacy used by res
 - Where can I find the data/plots used in the article? An archive of different iterations of the research paper and materials, including data and plots, are made freely available in the 'Archive'-folder.
 - Where can I find an older version of the paper? An archive of different iterations of the research paper and materials, including data and plots, are made freely available in the 'Archive'-folder.
 - Is the article provided in another format then PDF? Yes, a (currently outdated) version of the research paper is also made available in HTML-format at the URL: (https://emeyer-hansen.github.io/bayesian-kmo/)
-- Can I find the materials elsewhere? Yes, materials are also made available on its [*Open Science Framework* (OSF) project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
+- Can I find the materials elsewhere? Yes, (possibly outdated) materials are also made available on its [*Open Science Framework* (OSF) legacy project page](https://osf.io/t3upd/) (DOI: [10.17605/OSF.IO/T3UPD](https://doi.org/10.17605/OSF.IO/T3UPD)).
 
 <a id="changelog"></a>
 ## Changelog
+- **2026-10-11 9:37 CEST**
+  - [Project migration] - Project migration to Github
+    - With the [announced outphasing of OSF Projects workflows](https://www.cos.io/osf-changes), this project will discontinue maintenance on OSF from February 19th 2027 and onwards. Existing materials will remain on that site for archival purposes. Any further updates will instead be announced on this Github project page.
+- **2026-25-05 13:02 CEST** 
+  - [Manuscript accepted] - Manuscript accepted for publication
+    - Revised version of v2026-04-04-10-09 passed peer-review and was accepted for publication in [Statistica](https://rivista-statistica.unibo.it/).
 - **2026-04-04 10:09 CEST** 
   - [Version 2026-04-04-10-09] - Working Paper
     - Major revision based on feedback from anynomous reviewer.
